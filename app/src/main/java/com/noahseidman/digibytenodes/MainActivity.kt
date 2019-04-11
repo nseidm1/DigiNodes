@@ -13,7 +13,7 @@ import com.matthewmitchell.peercoinj.net.discovery.DnsDiscovery
 import com.matthewmitchell.peercoinj.params.MainNetParams
 import com.noahseidman.digibytenodes.adapter.MultiTypeDataBoundAdapter
 import kotlinx.android.synthetic.main.activity_main.*
-import java.net.Inet4Address
+import java.net.Inet6Address
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.util.*
@@ -30,6 +30,7 @@ class MainActivity : AppCompatActivity() {
     private val handler = Handler(Looper.getMainLooper())
     private val random = Random()
     private val executor = Executors.newSingleThreadScheduledExecutor()
+    private val addressExecutor = Executors.newCachedThreadPool()
     private lateinit var adapter_nodes: MultiTypeDataBoundAdapter
     private lateinit var adapter_info: MultiTypeDataBoundAdapter
     private val timer = Timer("Nodes", true)
@@ -119,21 +120,22 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun onPeersDiscovered(peer: Peer, peerAddresses: List<PeerAddress>) {
-                val previousSize = connections.size
-                val filteredAddress = peerAddresses.filter { it.time >= 28800000 && it.addr is Inet4Address }.map { QueryPeer(it) }.filter { !contains(it) }
-                if (filteredAddress.size == 0) {
-                    return
-                }
-                showMessage("getAddr received: " + filteredAddress.size)
-                connections.addAll(filteredAddress)
-                getAddresses?.cancel()
-                peerGroup.closeConnections()
-                if (previousSize != connections.size) {
-                    val list: List<PeerModel> = filteredAddress.map { PeerModel(it.peerAddress.addr.hostAddress, it.peerAddress.port) }
-                    handler.post {
-                        count.text = "Count: " + connections.size
-                        adapter_nodes.addItems(list)
-                        (recycler_nodes.layoutManager as LinearLayoutManager).smoothScrollToPosition(recycler_nodes, null, connections.size)
+                addressExecutor.execute {
+                    val previousSize = connections.size
+                    val filteredAddress = peerAddresses.filter { it.time >= 28800000 }.map { QueryPeer(it) }.filter { !contains(it) }
+                    if (filteredAddress.isNotEmpty()) {
+                        showMessage("getAddr received: " + filteredAddress.size)
+                        connections.addAll(filteredAddress)
+                        getAddresses?.cancel()
+                        peerGroup.closeConnections()
+                        if (previousSize != connections.size) {
+                            val list: List<PeerModel> = filteredAddress.map { PeerModel(it.peerAddress.addr.hostAddress, it.peerAddress.port) }
+                            handler.post {
+                                count.text = "Count: " + connections.size
+                                adapter_nodes.addItems(list)
+                                (recycler_nodes.layoutManager as LinearLayoutManager).smoothScrollToPosition(recycler_nodes, null, connections.size)
+                            }
+                        }
                     }
                 }
             }
@@ -187,11 +189,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun requestNewPeer(peerGroup: PeerGroup) {
+        showMessage("requesting new peer")
         var foundSomethingToQuery = false
         for (queryPeer in connections) {
             if (!queryPeer.queried) {
                 queryPeer.queried = true
-                if (!queryPeer.peerAddress.addr.isReachable(500)) {
+                if (!queryPeer.peerAddress.addr.isReachable(10) && queryPeer.peerAddress.addr is Inet6Address) {
                     continue
                 }
                 showMessage("requesting new peer")

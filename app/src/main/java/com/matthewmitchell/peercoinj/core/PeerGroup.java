@@ -138,7 +138,7 @@ public class PeerGroup {
         for (ListenerRegistration<PeerEventListener> registration : peerEventListeners) {
             peer.addEventListener(registration.listener, executor);
         }
-        peer.setSocketTimeout(DEFAULT_CONNECT_TIMEOUT_MILLIS);
+        peer.setTimeoutEnabled(false);
         peer.setMinProtocolVersion(vMinRequiredProtocolVersion);
         try {
             channels.openConnection(address.toSocketAddress(), peer);
