@@ -61,6 +61,7 @@ public class Peer extends PeerSocketHandler {
     private final NetworkParameters params;
     private final AbstractBlockChain blockChain;
     public boolean getAddressesFired = false;
+    public boolean alreadyDisconnectedFlag = false;
 
     // onPeerDisconnected should not be called directly by Peers when a PeerGroup is involved (we don't know the total
     // number of connected peers), thus we use a wrapper that PeerGroup can use to register listeners that wont get

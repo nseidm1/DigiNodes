@@ -152,7 +152,12 @@ class MainActivity : AppCompatActivity() {
 
             }
 
-            override fun onPeerDisconnected(peer: Peer?) {
+            override fun onPeerDisconnected(peer: Peer) {
+                if (!peer.alreadyDisconnectedFlag) {
+                    peer.alreadyDisconnectedFlag = true
+                } else {
+                    return
+                }
                 getAddresses?.cancel()
                 peerGroup.closeConnections()
                 showMessage("peer disconnected")
