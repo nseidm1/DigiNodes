@@ -96,10 +96,10 @@ class MainActivity : AppCompatActivity() {
 
             override fun onPeersDiscovered(peer: Peer, peerAddresses: List<PeerAddress>) {
                 addressExecutor.execute {
-                    val previousSize = connections.size
                     val filteredAddress = peerAddresses.filter { it.time >= 28800000 }.filter { !contains(it) }
                     if (filteredAddress.isNotEmpty()) {
                         showMessage("getAddr received: " + filteredAddress.size)
+                        val previousSize = connections.size
                         connections.addAll(filteredAddress)
                         getAddresses?.cancel()
                         peerGroup.closeConnections()
