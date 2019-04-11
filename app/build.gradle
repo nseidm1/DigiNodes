@@ -1,0 +1,94 @@
+apply plugin: 'com.android.application'
+
+apply plugin: 'kotlin-android'
+
+apply plugin: 'kotlin-android-extensions'
+
+android {
+    dataBinding {
+        enabled = true
+    }
+    signingConfigs {
+        config {
+            keyAlias 'Noah Seidman'
+            keyPassword '700352134bb'
+            storeFile file('/Users/nseidm1/Downloads/storePublishNewNew')
+            storePassword '700352134bb'
+        }
+    }
+    compileSdkVersion 28
+    defaultConfig {
+        applicationId "com.noahseidman.digibytenodes"
+        minSdkVersion 28
+        targetSdkVersion 28
+        versionCode 1
+        versionName "1.0"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+//    buildTypes {
+//        release {
+//            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+//            minifyEnabled = true
+//            debuggable = false
+//
+//            ndk {
+//                minifyEnabled = false
+//                debuggable = false
+//                abiFilters 'armeabi-v7a'
+//            }
+//        }
+//        debug {
+//            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+//            debuggable = true
+//            minifyEnabled = true
+//
+//            ndk {
+//                minifyEnabled = false
+//                debuggable = true
+//                abiFilters 'x86', 'x86_64', 'armeabi-v7a', 'arm64-v8a'
+//            }
+//        }
+//    }
+
+    sourceSets {
+        //noinspection GroovyAssignabilityCheck
+        main {
+            jni {
+                srcDirs = ["armeabi-v7a","x86_64"]
+            }
+
+            jniLibs {
+                srcDir 'src/main/jniLibs'
+            }
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+}
+
+repositories {
+    maven { url 'https://jitpack.io' }
+    mavenCentral()
+}
+
+configurations {
+    all*.exclude group: 'com.google.guava', module: 'listenablefuture'
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    implementation 'androidx.appcompat:appcompat:1.1.0-alpha03'
+    implementation 'androidx.core:core-ktx:1.1.0-alpha05'
+    testImplementation 'junit:junit:4.12'
+    androidTestImplementation 'androidx.test:runner:1.1.0-alpha4'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.1.0-alpha4'
+    implementation 'com.github.google:guava:release19-SNAPSHOT'
+    implementation 'com.github.stephenc:jcip-annotations:jcip-annotations-1.0-1'
+    implementation 'com.github.rtyley.spongycastle:bcpg-jdk15on:sc-v1.58.0.0'
+    implementation 'com.google.protobuf:protobuf-java:3.5.1'
+    compile 'com.android.support:recyclerview-v7:28.1.1'
+}

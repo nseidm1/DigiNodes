@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <data>
+        <variable name="data" type="com.noahseidman.digibytenodes.PeerModel"/>
+        <variable name="callback" type="com.noahseidman.digibytenodes.PeerModel"/>
+    </data>
+
+    <TextView android:textSize="20sp"
+              android:padding="12dp"
+              android:gravity="center"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:text="@{data.address}"/>
+
+</layout>
