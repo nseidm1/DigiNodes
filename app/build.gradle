@@ -8,14 +8,7 @@ android {
     dataBinding {
         enabled = true
     }
-    signingConfigs {
-        config {
-            keyAlias 'Noah Seidman'
-            keyPassword '700352134bb'
-            storeFile file('/Users/nseidm1/Downloads/storePublishNewNew')
-            storePassword '700352134bb'
-        }
-    }
+
     compileSdkVersion 28
     defaultConfig {
         applicationId "com.noahseidman.digibytenodes"
