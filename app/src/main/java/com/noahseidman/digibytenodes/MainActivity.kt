@@ -189,7 +189,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun requestNewPeer(peerGroup: PeerGroup) {
-        showMessage("requesting new peer")
         var foundSomethingToQuery = false
         for (queryPeer in connections) {
             if (!queryPeer.queried) {
