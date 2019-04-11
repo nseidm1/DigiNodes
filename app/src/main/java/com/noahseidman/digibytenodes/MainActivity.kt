@@ -162,12 +162,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun requestNewPeer(peerGroup: PeerGroup) {
-        showMessage("requesting new peer")
         val peerAddress = connections.elementAt(random.nextInt(connections.size - 1))
         if (!peerAddress.addr.isReachable(10) || peerAddress.addr is Inet6Address) {
             requestNewPeer(peerGroup)
             return
         }
+        showMessage("requesting new peer")
         executor.schedule( { peerGroup.connectTo(peerAddress) }, 1000, TimeUnit.MILLISECONDS)
     }
 
