@@ -33,7 +33,7 @@ import static com.matthewmitchell.peercoinj.core.Utils.uint64ToByteStreamLE;
  * A PeerAddress holds an IP address and port number representing the network location of
  * a peer in the Peercoin P2P network. It exists primarily for serialization purposes.
  */
-public class PeerAddress extends ChildMessage {
+public class PeerAddress extends ChildMessage implements Comparable {
     private static final long serialVersionUID = 7501293709324197411L;
     static final int MESSAGE_SIZE = 30;
 
@@ -253,6 +253,15 @@ public class PeerAddress extends ChildMessage {
     
     public InetSocketAddress toSocketAddress() {
         return new InetSocketAddress(addr, port);
+    }
+
+    @Override
+    public int compareTo(Object o) {
+        if (o.equals(this)) {
+            return 0;
+        } else {
+            return 1;
+        }
     }
 
     private class ReusableInetSocketAddres extends InetSocketAddress {

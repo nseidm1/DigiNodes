@@ -14,7 +14,6 @@ import com.matthewmitchell.peercoinj.params.MainNetParams
 import com.noahseidman.digibytenodes.adapter.MultiTypeDataBoundAdapter
 import kotlinx.android.synthetic.main.activity_main.*
 import java.net.Inet6Address
-import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.util.*
 import java.util.concurrent.ConcurrentSkipListSet
@@ -26,7 +25,7 @@ import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {
 
-    private val connections: ConcurrentSkipListSet<QueryPeer> = ConcurrentSkipListSet()
+    private val connections: ConcurrentSkipListSet<PeerAddress> = ConcurrentSkipListSet()
     private val handler = Handler(Looper.getMainLooper())
     private val random = Random()
     private val executor = Executors.newSingleThreadScheduledExecutor()
@@ -36,30 +35,6 @@ class MainActivity : AppCompatActivity() {
     private val timer = Timer("Nodes", true)
     private lateinit var peerGroup: PeerGroup
 
-    private data class QueryPeer(val peerAddress: PeerAddress, var queried: Boolean = false): Comparable<QueryPeer> {
-        override fun compareTo(other: QueryPeer): Int {
-            if (equals(other)) {
-                return 0
-            } else {
-                return 1
-            }
-        }
-
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-
-            other as QueryPeer
-
-            return peerAddress.equals(other.peerAddress)
-        }
-
-        override fun hashCode(): Int {
-            var result = peerAddress.hashCode()
-            result = 31 * result + queried.hashCode()
-            return result
-        }
-    }
     private var getAddresses: GetAddresses? = null
 
     private class GetAddresses(val activity: MainActivity, val peer: Peer, val peerGroup: PeerGroup): Runnable {
@@ -110,9 +85,9 @@ class MainActivity : AppCompatActivity() {
                 }, executor)
             }
 
-            private fun contains(check: QueryPeer): Boolean {
-                for (queryPeer in connections) {
-                    if (queryPeer.equals(check)) {
+            private fun contains(check: PeerAddress): Boolean {
+                for (peerAddress in connections) {
+                    if (peerAddress.equals(check)) {
                         return true
                     }
                 }
@@ -122,14 +97,14 @@ class MainActivity : AppCompatActivity() {
             override fun onPeersDiscovered(peer: Peer, peerAddresses: List<PeerAddress>) {
                 addressExecutor.execute {
                     val previousSize = connections.size
-                    val filteredAddress = peerAddresses.filter { it.time >= 28800000 }.map { QueryPeer(it) }.filter { !contains(it) }
+                    val filteredAddress = peerAddresses.filter { it.time >= 28800000 }.filter { !contains(it) }
                     if (filteredAddress.isNotEmpty()) {
                         showMessage("getAddr received: " + filteredAddress.size)
                         connections.addAll(filteredAddress)
                         getAddresses?.cancel()
                         peerGroup.closeConnections()
                         if (previousSize != connections.size) {
-                            val list: List<PeerModel> = filteredAddress.map { PeerModel(it.peerAddress.addr.hostAddress, it.peerAddress.port) }
+                            val list: List<PeerModel> = filteredAddress.map { PeerModel(it.addr.hostAddress, it.port) }
                             handler.post {
                                 count.text = "Count: " + connections.size
                                 adapter_nodes.addItems(list)
@@ -144,7 +119,7 @@ class MainActivity : AppCompatActivity() {
                 showMessage("dns discovery")
                 for (address in addresses) {
                     val peerAddress = PeerAddress(address.address, address.port)
-                    connections.add(QueryPeer(peerAddress))
+                    connections.add(peerAddress)
                     handler.post{
                         adapter_nodes.addItem(PeerModel(address.address.hostAddress, address.port))
                         (recycler_nodes.layoutManager as LinearLayoutManager).smoothScrollToPosition(recycler_nodes, null, connections.size)
@@ -165,8 +140,6 @@ class MainActivity : AppCompatActivity() {
                 showMessage("peer disconnected")
             }
         })
-        connections.add(QueryPeer(PeerAddress(InetAddress.getByName("54.215.247.71"), 12024)))
-        connections.add(QueryPeer(PeerAddress(InetAddress.getByName("98.203.82.233"), 12024)))
         peerGroup.addPeerDiscovery(DnsDiscovery(MainNetParams.get()))
         peerGroup.discoverPeers()
         peerGroup.startUp()
@@ -189,27 +162,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun requestNewPeer(peerGroup: PeerGroup) {
-        var foundSomethingToQuery = false
-        for (queryPeer in connections) {
-            if (!queryPeer.queried) {
-                queryPeer.queried = true
-                if (!queryPeer.peerAddress.addr.isReachable(10) && queryPeer.peerAddress.addr is Inet6Address) {
-                    continue
-                }
-                showMessage("requesting new peer")
-                peerGroup.connectTo(queryPeer.peerAddress)
-                foundSomethingToQuery = true
-                break
-            }
+        showMessage("requesting new peer")
+        val peerAddress = connections.elementAt(random.nextInt(connections.size - 1))
+        if (!peerAddress.addr.isReachable(10) || peerAddress.addr is Inet6Address) {
+            requestNewPeer(peerGroup)
+            return
         }
-        if (!foundSomethingToQuery) {
-            showMessage("requesting new peer")
-            if (connections.size == 1) {
-                executor.schedule( { peerGroup.connectTo(connections.elementAt(0).peerAddress) }, 1000, TimeUnit.MILLISECONDS)
-            } else {
-                executor.schedule( { peerGroup.connectTo(connections.elementAt(random.nextInt(connections.size - 1)).peerAddress) }, 1000, TimeUnit.MILLISECONDS)
-            }
-        }
+        executor.schedule( { peerGroup.connectTo(peerAddress) }, 1000, TimeUnit.MILLISECONDS)
     }
 
     private fun showMessage(message: String) {
