@@ -61,7 +61,7 @@ class MainActivity : AppCompatActivity() {
     }
     private var getAddresses: GetAddresses? = null
 
-    private class GetAddresses(val activity: MainActivity, val peer: Peer): Runnable {
+    private class GetAddresses(val activity: MainActivity, val peer: Peer, val peerGroup: PeerGroup): Runnable {
 
         private var canceled = false
         private var sendCount = 0
@@ -72,7 +72,7 @@ class MainActivity : AppCompatActivity() {
 
         override fun run() {
             if (sendCount > 10) {
-                peer.close()
+                peerGroup.closeConnections()
                 return
             }
             if (!canceled) {
@@ -103,7 +103,7 @@ class MainActivity : AppCompatActivity() {
                 peer.connectionOpenFuture.addListener(object: Runnable {
                     override fun run() {
                         getAddresses?.cancel()
-                        getAddresses = GetAddresses(this@MainActivity, peer)
+                        getAddresses = GetAddresses(this@MainActivity, peer, peerGroup)
                         executor.schedule(getAddresses, 2500, TimeUnit.MILLISECONDS)
                     }
                 }, executor)
@@ -127,7 +127,7 @@ class MainActivity : AppCompatActivity() {
                 showMessage("getAddr received: " + filteredAddress.size)
                 connections.addAll(filteredAddress)
                 getAddresses?.cancel()
-                peer.close()
+                peerGroup.closeConnections()
                 if (previousSize != connections.size) {
                     val list: List<PeerModel> = filteredAddress.map { PeerModel(it.peerAddress.addr.hostAddress, it.peerAddress.port) }
                     handler.post {
