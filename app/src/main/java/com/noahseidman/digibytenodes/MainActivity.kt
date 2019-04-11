@@ -75,10 +75,10 @@ class MainActivity : AppCompatActivity() {
                 peer.close()
                 return
             }
-            activity.showMessage("sending getAddr: #" + sendCount)
-            peer.getAddresses()
-            sendCount++
             if (!canceled) {
+                activity.showMessage("sending getAddr: #" + sendCount)
+                peer.getAddresses()
+                sendCount++
                 activity.executor.schedule(this, 2500, TimeUnit.MILLISECONDS)
             }
         }
@@ -121,8 +121,13 @@ class MainActivity : AppCompatActivity() {
             override fun onPeersDiscovered(peer: Peer, peerAddresses: List<PeerAddress>) {
                 val previousSize = connections.size
                 val filteredAddress = peerAddresses.filter { it.time >= 28800000 && it.addr is Inet4Address }.map { QueryPeer(it) }.filter { !contains(it) }
-                showMessage("getAddresses received: " + filteredAddress.size)
+                if (filteredAddress.size == 0) {
+                    return
+                }
+                showMessage("getAddr received: " + filteredAddress.size)
                 connections.addAll(filteredAddress)
+                getAddresses?.cancel()
+                peer.close()
                 if (previousSize != connections.size) {
                     val list: List<PeerModel> = filteredAddress.map { PeerModel(it.peerAddress.addr.hostAddress, it.peerAddress.port) }
                     handler.post {
