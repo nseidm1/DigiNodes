@@ -2,6 +2,7 @@
           package="com.noahseidman.digibytenodes">
 
     <uses-permission android:name="android.permission.INTERNET"/>
+
     <application android:allowBackup="true"
                  android:label="@string/app_name"
                  android:icon="@mipmap/ic_launcher"
@@ -16,6 +17,15 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <provider
+                android:name="androidx.core.content.FileProvider"
+                android:authorities="com.noahseidman.digibytenodes.fileprovider"
+                android:grantUriPermissions="true"
+                android:exported="false">
+            <meta-data
+                    android:name="android.support.FILE_PROVIDER_PATHS"
+                    android:resource="@xml/filepaths" />
+        </provider>
     </application>
 
 </manifest>
