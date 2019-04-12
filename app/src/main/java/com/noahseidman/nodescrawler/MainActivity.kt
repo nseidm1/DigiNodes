@@ -124,7 +124,6 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
                         updateCounts(viewModels)
                         getAddresses?.cancel()
                         peerGroup.closeConnections()
-                        this@MainActivity.peer = false
                     }
                     handler.post {progress.visibility = View.GONE }
                 }
@@ -149,8 +148,10 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
                 if (!peer.alreadyDisconnectedFlag) { peer.alreadyDisconnectedFlag = true } else { return }
                 getAddresses?.cancel()
                 peerGroup.closeConnections()
-                this@MainActivity.peer = false
                 showMessage("peer disconnected")
+                handler.postDelayed({
+                    this@MainActivity.peer = false
+                } , 1000)
             }
         })
         peerGroup.addPeerDiscovery(DnsDiscovery(MainNetParams.get()))
