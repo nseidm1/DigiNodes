@@ -114,7 +114,6 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
 
             override fun onPeersDiscovered(peer: Peer, peerAddresses: List<PeerAddress>) {
                 scheduledExecutor.execute {
-                    showMessage("processing addresses, please wait...")
                     handler.post {progress.visibility = View.VISIBLE }
                     val filteredAddress = peerAddresses.filter { it.time >= 28800000 }.filter { !contains(it, connections) }
                     if (filteredAddress.isNotEmpty()) {
