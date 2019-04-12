@@ -251,6 +251,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
 
         val zipFile = File(directory, "addresses.zip")
         ByteStreams.copy(ByteArrayInputStream(ZipUtil.packEntry(xmlFile)), FileOutputStream(zipFile))
+        xmlFile.delete()
 
         val uri = FileProvider.getUriForFile(this, "com.noahseidman.digibytenodes.fileprovider", zipFile)
         val resInfoList = getPackageManager().queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY);
