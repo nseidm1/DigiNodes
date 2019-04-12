@@ -124,7 +124,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
                         showMessage("getAddr received: " + filteredAddress.size)
                         val previousSize = connections.size
                         connections.addAll(filteredAddress)
-                        handler.post { updateShareIntent() }
+                        updateShareIntent()
                         getAddresses?.cancel()
                         peerGroup.closeConnections()
                         this@MainActivity.peer = false
@@ -144,8 +144,8 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
                 showMessage("dns discovery")
                 for (address in addresses) {
                     connections.add(PeerAddress(address.address, address.port))
+                    updateShareIntent()
                     handler.post{
-                        updateShareIntent()
                         adapter_nodes.addItem(PeerModel(address.address.hostAddress, address.port))
                         (recycler_nodes.layoutManager as LinearLayoutManager).smoothScrollToPosition(recycler_nodes, null, connections.size)
                     }
@@ -261,6 +261,6 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         val intent = Intent(Intent.ACTION_SEND)
         intent.setType("file/zip")
         intent.putExtra(Intent.EXTRA_STREAM, uri);
-        shareActionProvider?.setShareIntent(intent)
+        handler.post{ shareActionProvider?.setShareIntent(intent) }
     }
 }
