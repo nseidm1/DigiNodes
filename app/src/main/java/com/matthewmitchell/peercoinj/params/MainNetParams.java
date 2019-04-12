@@ -46,12 +46,6 @@ public class MainNetParams extends NetworkParameters {
         spendableCoinbaseDepth = CoinDefinition.spendableCoinbaseDepth;
         genesisBlock.setMerkleRoot(new Sha256Hash(CoinDefinition.genesisMerkleRoot));
 
-        // This contains (at a minimum) the blocks which are not BIP30 compliant. BIP30 changed how duplicate
-        // transactions are handled. Duplicated transactions could occur in the case where a coinbase had the same
-        // extraNonce and the same outputs but appeared at different heights, and greatly complicated re-org handling.
-        // Having these here simplifies block connection logic considerably.
-        CoinDefinition.initCheckpoints(checkpoints);
-
         dnsSeeds = CoinDefinition.dnsSeeds;
     }
 
