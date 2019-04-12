@@ -10,15 +10,13 @@ public class NetUtils {
      * @param serverHost server hostname (or ip)
      * @param serverPort server port
      * @param timeoutMs timeout in ms
-     * @param exDetails message to provide as exception details when unable to connect
      */
-    public static boolean checkServerListening(String serverHost, int serverPort, int timeoutMs, String exDetails) {
+    public static boolean checkServerListening(String serverHost, int serverPort, int timeoutMs) {
         try (Socket s = new Socket()) {
             s.connect(new InetSocketAddress(serverHost, serverPort), timeoutMs);
+            s.close();
             return true;
         } catch (Exception e) {
-            String errMsg = String.format("Can't connect to [%s:%d] (timeout was %d ms) - %s, - %s",
-                    serverHost, serverPort, timeoutMs, exDetails, e.getMessage());
             return false;
         }
     }

@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">DigiByte Node Crawler</string>
+    <string name="messages">Messages (%s)</string>
+    <string name="nodes">Nodes (%s) Open (%s)</string>
 </resources>

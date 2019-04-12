@@ -27,7 +27,6 @@ import org.zeroturnaround.zip.ZipUtil
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileOutputStream
-import java.net.Inet6Address
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.UnknownHostException
@@ -36,24 +35,29 @@ import java.util.*
 import java.util.concurrent.ConcurrentSkipListSet
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-
-
+import kotlin.collections.HashSet
 
 
 class MainActivity : AppCompatActivity(), View.OnClickListener {
     private val connections: ConcurrentSkipListSet<PeerAddress> = ConcurrentSkipListSet()
+    private val openConnections: HashSet<PeerAddress> = HashSet()
     private val handler = Handler(Looper.getMainLooper())
     private val random = Random()
-    private val executor = Executors.newSingleThreadScheduledExecutor()
-    private val addressExecutor = Executors.newCachedThreadPool()
+    private val scheduledExecutor = Executors.newSingleThreadScheduledExecutor()
+    private val openCheckerExecutor = Executors.newSingleThreadScheduledExecutor()
     private lateinit var adapter_nodes: MultiTypeDataBoundAdapter
     private lateinit var adapter_info: MultiTypeDataBoundAdapter
-    private val timer = Timer("Nodes", true)
     private lateinit var peerGroup: PeerGroup
     private var peer = false
     private var shareActionProvider: ShareActionProvider? = null
-
     private var getAddresses: GetAddresses? = null
+    private val slowOpenChecker: OpenChecker
+    private val requestNewPeer: RequestNewPeer
+
+    init {
+        slowOpenChecker = OpenChecker(this, 1000)
+        requestNewPeer = RequestNewPeer(this)
+    }
 
     private class GetAddresses(val activity: MainActivity, val peer: Peer, val peerGroup: PeerGroup): Runnable {
 
@@ -65,7 +69,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         }
 
         override fun run() {
-            if (sendCount > 10) {
+            if (sendCount > 20) {
                 peerGroup.closeConnections()
                 return
             }
@@ -73,7 +77,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
                 activity.showMessage("sending getAddr: #" + sendCount)
                 peer.getAddresses()
                 sendCount++
-                activity.executor.schedule(this, 6000, TimeUnit.MILLISECONDS)
+                activity.scheduledExecutor.schedule(this, 3000, TimeUnit.MILLISECONDS)
             }
         }
     }
@@ -103,54 +107,43 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
                     override fun run() {
                         getAddresses?.cancel()
                         getAddresses = GetAddresses(this@MainActivity, peer, peerGroup)
-                        executor.schedule(getAddresses, 6000, TimeUnit.MILLISECONDS)
+                        scheduledExecutor.schedule(getAddresses, 0, TimeUnit.MILLISECONDS)
                     }
-                }, executor)
-            }
-
-            private fun contains(check: PeerAddress): Boolean {
-                for (peerAddress in connections) {
-                    if (peerAddress.equals(check)) {
-                        return true
-                    }
-                }
-                return false
+                }, scheduledExecutor)
             }
 
             override fun onPeersDiscovered(peer: Peer, peerAddresses: List<PeerAddress>) {
-                addressExecutor.execute {
-                    val filteredAddress = peerAddresses.filter { it.time >= 28800000 }.filter { !contains(it) }
+                scheduledExecutor.execute {
+                    showMessage("processing addresses, please wait...")
+                    handler.post {progress.visibility = View.VISIBLE }
+                    val filteredAddress = peerAddresses.filter { it.time >= 28800000 }.filter { !contains(it, connections) }
                     if (filteredAddress.isNotEmpty()) {
                         showMessage("getAddr received: " + filteredAddress.size)
-                        val previousSize = connections.size
+                        val viewModels: List<PeerModel> = filteredAddress.map { PeerModel(it.addr.hostAddress, it.port) }
                         connections.addAll(filteredAddress)
                         updateShareIntent()
+                        updateCounts(viewModels)
                         getAddresses?.cancel()
                         peerGroup.closeConnections()
                         this@MainActivity.peer = false
-                        if (previousSize != connections.size) {
-                            val list: List<PeerModel> = filteredAddress.map { PeerModel(it.addr.hostAddress, it.port) }
-                            handler.post {
-                                count.text = "Nodes (" + connections.size + ")"
-                                adapter_nodes.addItems(list)
-                                (recycler_nodes.layoutManager as LinearLayoutManager).smoothScrollToPosition(recycler_nodes, null, connections.size)
-                            }
-                        }
                     }
+                    handler.post {progress.visibility = View.GONE }
                 }
             }
 
             override fun onDnsDiscovery(addresses: Array<out InetSocketAddress>) {
-                showMessage("dns discovery")
-                for (address in addresses) {
-                    connections.add(PeerAddress(address.address, address.port))
-                    updateShareIntent()
-                    handler.post{
-                        adapter_nodes.addItem(PeerModel(address.address.hostAddress, address.port))
-                        (recycler_nodes.layoutManager as LinearLayoutManager).smoothScrollToPosition(recycler_nodes, null, connections.size)
+                scheduledExecutor.execute {
+                    if (addresses.isEmpty()) {
+                        showMessage("dns discovery: failed")
+                    } else {
+                        showMessage("dns discovery: success")
+                        val addresses = addresses.map { PeerAddress(it.address, it.port) }
+                        val viewModels: List<PeerModel> = addresses.map { PeerModel(it.addr.hostAddress, it.port) }
+                        connections.addAll(addresses)
+                        updateCounts(viewModels)
+                        updateShareIntent()
                     }
                 }
-                handler.post { count.text = "Nodes (" + connections.size + ")" }
             }
 
             override fun onPeerDisconnected(peer: Peer) {
@@ -162,54 +155,73 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
             }
         })
         peerGroup.addPeerDiscovery(DnsDiscovery(MainNetParams.get()))
-        executor.execute {
+        scheduledExecutor.execute {
             handler.post {progress.visibility = View.VISIBLE }
             peerGroup.startUp()
             peerGroup.discoverPeers()
-            timer.schedule(object: TimerTask() {
-                override fun run() {
-                    executor.execute { requestNewPeer(peerGroup) }
-                }
-            }, 2500, 2500)
             handler.post {progress.visibility = View.GONE }
+        }
+        scheduledExecutor.scheduleAtFixedRate(requestNewPeer, 2500, 2500, TimeUnit.MILLISECONDS)
+        openCheckerExecutor.scheduleAtFixedRate(slowOpenChecker, 2500, 1/* has to be greater than 0, contains a blocking operation to slow it down */, TimeUnit.MILLISECONDS)
+    }
+
+    private fun updateCounts(viewModels: List<PeerModel>? = null) {
+        handler.post {
+            count.text = String.format(getString(R.string.nodes), connections.size, openConnections.size)
+            viewModels?.let {
+                adapter_nodes.addItems(viewModels)
+                (recycler_nodes.layoutManager as LinearLayoutManager).smoothScrollToPosition(recycler_nodes, null, connections.size)
+            }
+        }
+    }
+
+    private class OpenChecker(val activity: MainActivity, val speed: Int): Runnable {
+        private val random = Random()
+
+        override fun run() {
+            if (activity.connections.isEmpty()) {
+                return
+            }
+            val peerAddress = activity.connections.elementAt(random.nextInt(activity.connections.size - 1))
+            if (!peerAddress.open && NetUtils.checkServerListening(peerAddress.addr.hostAddress, 12024, speed) && !activity.contains(peerAddress, activity.openConnections)) {
+                activity.openConnections.add(peerAddress)
+                activity.updateCounts()
+                peerAddress.open = true
+            }
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        executor.execute {
+        scheduledExecutor.execute {
+            scheduledExecutor.shutdown()
             peerGroup.shutDown()
-            timer.cancel()
             getAddresses?.cancel()
         }
     }
 
-    private fun requestNewPeer(peerGroup: PeerGroup) {
-        if (peer) {
-            return
+    private class RequestNewPeer(val activity: MainActivity): Runnable {
+        override fun run() {
+            if (activity.peer || activity.openConnections.isEmpty()) {
+                return
+            }
+            val peerAddress = activity.openConnections.elementAt(activity.random.nextInt(activity.openConnections.size - 1))
+            activity.showMessage("requesting new peer")
+            activity.scheduledExecutor.schedule( { activity.peerGroup.connectTo(peerAddress) }, 1000, TimeUnit.MILLISECONDS)
+            activity.peer = true
         }
-        handler.post {progress.visibility = View.VISIBLE }
-        val peerAddress = connections.elementAt(random.nextInt(connections.size - 1))
-        if (!NetUtils.checkServerListening(peerAddress.addr.hostAddress, 12024, 350, null) || peerAddress.addr is Inet6Address) {
-            requestNewPeer(peerGroup)
-            return
-        }
-        showMessage("requesting new peer")
-        executor.schedule( { peerGroup.connectTo(peerAddress) }, 1000, TimeUnit.MILLISECONDS)
-        peer = true
-        handler.post {progress.visibility = View.GONE }
     }
 
     private fun showMessage(message: String) {
         handler.post {
             adapter_info.addItem(InfoModel(message))
             (recycler_info.layoutManager as LinearLayoutManager).smoothScrollToPosition(recycler_info, null, adapter_info.itemCount)
-            messages.text = "Messages (" + adapter_info.itemCount + ")"
+            messages.text = String.format(getString(R.string.messages), adapter_info.itemCount)
         }
     }
 
     override fun onClick(v: View?) {
-        executor.execute {
+        scheduledExecutor.execute {
             try {
                 if (edit.text.isNullOrEmpty()) {
                     throw NullPointerException()
@@ -217,7 +229,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
                 val address = InetAddress.getByName(edit.text.toString())
                 val peerAddress = PeerAddress(address)
                 connections.add(peerAddress)
-                count.text = "Nodes (" + connections.size + ")"
+                updateCounts(null)
                 handler.post {
                     handler.post { showMessage("Manual Node Added") }
                     adapter_nodes.addItem( PeerModel(peerAddress.addr.hostAddress, peerAddress.port))
@@ -265,5 +277,15 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         intent.setType("file/zip")
         intent.putExtra(Intent.EXTRA_STREAM, uri);
         handler.post { shareActionProvider?.setShareIntent(intent) }
+    }
+
+
+    private fun contains(check: PeerAddress, collection: Set<PeerAddress>): Boolean {
+        for (peerAddress in collection) {
+            if (peerAddress.equals(check)) {
+                return true
+            }
+        }
+        return false
     }
 }

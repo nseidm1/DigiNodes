@@ -41,6 +41,7 @@ public class PeerAddress extends ChildMessage implements Comparable {
     private int port;
     private BigInteger services;
     private long time;
+    public boolean open;
 
     /**
      * Construct a peer address from a serialized payload.
