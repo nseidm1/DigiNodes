@@ -23,6 +23,7 @@ import com.noahseidman.digibytenodes.adapter.MultiTypeDataBoundAdapter
 import kotlinx.android.synthetic.main.activity_main.*
 import org.xembly.Directives
 import org.xembly.Xembler
+import org.zeroturnaround.zip.ZipUtil
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -238,23 +239,27 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
     }
 
     private fun updateShareIntent() {
-    val directives = Directives().add("Nodes");
+        val directives = Directives().add("Nodes");
         for (peerAddress in connections) {
             directives.add("Node").set(peerAddress.addr.hostAddress).up();
         }
         val directory = File(filesDir, "nodes")
         directory.mkdirs()
-        val file = File(directory, "addresses.xml")
-        file.createNewFile()
-        ByteStreams.copy(ByteArrayInputStream(Xembler(directives).xml().toByteArray(Charset.defaultCharset())), FileOutputStream(file))
-        val uri = FileProvider.getUriForFile(this, "com.noahseidman.digibytenodes.fileprovider", file)
+        val xmlFile = File(directory, "addresses.xml")
+        xmlFile.createNewFile()
+        ByteStreams.copy(ByteArrayInputStream(Xembler(directives).xml().toByteArray(Charset.defaultCharset())), FileOutputStream(xmlFile))
+
+        val zipFile = File(directory, "addresses.zip")
+        ZipUtil.pack(directory, zipFile);
+
+        val uri = FileProvider.getUriForFile(this, "com.noahseidman.digibytenodes.fileprovider", zipFile)
         val resInfoList = getPackageManager().queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY);
         for (resolveInfo in resInfoList) {
             val packageName = resolveInfo.activityInfo.packageName;
             grantUriPermission(packageName, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         val intent = Intent(Intent.ACTION_SEND)
-        intent.setType("file/xml")
+        intent.setType("file/zip")
         intent.putExtra(Intent.EXTRA_STREAM, uri);
         shareActionProvider?.setShareIntent(intent)
     }

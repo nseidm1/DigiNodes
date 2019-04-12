@@ -85,4 +85,7 @@ dependencies {
     implementation 'com.google.protobuf:protobuf-java:3.5.1'
     compile 'com.android.support:recyclerview-v7:28.1.1'
     implementation 'com.jcabi.incubator:xembly:0.22.1'
+    implementation ('com.github.zeroturnaround:zt-zip:master') {
+        exclude group: 'org.slf4j'
+    }
 }
