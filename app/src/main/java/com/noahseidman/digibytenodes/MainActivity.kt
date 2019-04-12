@@ -177,9 +177,11 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
 
     override fun onDestroy() {
         super.onDestroy()
-        peerGroup.shutDown()
-        timer.cancel()
-        getAddresses?.cancel()
+        executor.execute {
+            peerGroup.shutDown()
+            timer.cancel()
+            getAddresses?.cancel()
+        }
     }
 
     private fun requestNewPeer(peerGroup: PeerGroup) {
