@@ -13,7 +13,7 @@
     </androidx.appcompat.widget.Toolbar>
 
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                  android:orientation="horizontal">
+                  android:orientation="horizontal" android:focusableInTouchMode="true">
         <EditText android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
                   android:id="@+id/edit" android:hint="Manually enter a node ip" android:paddingStart="12dp"
                   android:paddingEnd="12dp"/>
