@@ -2,8 +2,8 @@
 <layout xmlns:android="http://schemas.android.com/apk/res/android">
 
     <data>
-        <variable name="data" type="com.noahseidman.digibytenodes.PeerModel"/>
-        <variable name="callback" type="com.noahseidman.digibytenodes.PeerModel"/>
+        <variable name="data" type="com.noahseidman.nodescrawler.PeerModel"/>
+        <variable name="callback" type="com.noahseidman.nodescrawler.PeerModel"/>
     </data>
 
     <TextView android:textSize="20sp"

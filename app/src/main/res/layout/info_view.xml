@@ -2,8 +2,8 @@
 <layout xmlns:android="http://schemas.android.com/apk/res/android">
 
     <data>
-        <variable name="data" type="com.noahseidman.digibytenodes.InfoModel"/>
-        <variable name="callback" type="com.noahseidman.digibytenodes.InfoModel"/>
+        <variable name="data" type="com.noahseidman.nodescrawler.InfoModel"/>
+        <variable name="callback" type="com.noahseidman.nodescrawler.InfoModel"/>
     </data>
 
     <TextView android:textSize="20sp"

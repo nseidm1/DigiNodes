@@ -17,8 +17,8 @@
 package com.hashengineering.crypto;
 
 import com.google.common.io.ByteStreams;
-import com.matthewmitchell.peercoinj.core.Sha256Hash;
-import com.matthewmitchell.peercoinj.core.Utils;
+import com.noahseidman.coinj.core.Sha256Hash;
+import com.noahseidman.coinj.core.Utils;
 import org.spongycastle.util.encoders.Hex;
 
 import java.io.File;
