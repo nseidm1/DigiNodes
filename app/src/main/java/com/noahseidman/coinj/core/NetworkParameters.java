@@ -285,7 +285,7 @@ public abstract class NetworkParameters implements Serializable {
      * If we are running in testnet-in-a-box mode, we allow connections to nodes with 0 non-genesis blocks.
      */
     public boolean allowEmptyPeerChain() {
-        return true;
+        return CoinDefinition.allowEmptyPeers;
     }
 
     /** How many blocks pass between difficulty adjustment periods. Peercoin standardises this to be 2015. */

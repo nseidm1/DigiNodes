@@ -55,7 +55,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
     private val requestNewPeer: RequestNewPeer
 
     init {
-        slowOpenChecker = OpenChecker(this, 1000)
+        slowOpenChecker = OpenChecker(this, 350)
         requestNewPeer = RequestNewPeer(this)
     }
 
@@ -115,7 +115,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
             override fun onPeersDiscovered(peer: Peer, peerAddresses: List<PeerAddress>) {
                 scheduledExecutor.execute {
                     handler.post {progress.visibility = View.VISIBLE }
-                    val filteredAddress = peerAddresses.filter { it.time >= 28800000 }.filter { !contains(it, connections) }
+                    val filteredAddress = peerAddresses.filter { !contains(it, connections) }
                     if (filteredAddress.isNotEmpty()) {
                         showMessage("getAddr received: " + filteredAddress.size)
                         val viewModels: List<PeerModel> = filteredAddress.map { PeerModel(it.addr.hostAddress, it.port) }
