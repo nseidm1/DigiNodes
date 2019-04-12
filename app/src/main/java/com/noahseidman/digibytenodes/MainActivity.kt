@@ -61,7 +61,7 @@ class MainActivity : AppCompatActivity() {
                 activity.showMessage("sending getAddr: #" + sendCount)
                 peer.getAddresses()
                 sendCount++
-                activity.executor.schedule(this, 3000, TimeUnit.MILLISECONDS)
+                activity.executor.schedule(this, 6000, TimeUnit.MILLISECONDS)
             }
         }
     }
@@ -69,8 +69,10 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        setSupportActionBar(toolbar);
-        getSupportActionBar()?.setTitle(R.string.app_name);
+        setSupportActionBar(toolbar)
+        supportActionBar?.setTitle(R.string.app_name)
+        supportActionBar?.setIcon(R.mipmap.ic_launcher)
+        supportActionBar?.setDisplayShowHomeEnabled(true)
         recycler_nodes.layoutManager = LinearLayoutManager(this)
         (recycler_nodes.layoutManager as LinearLayoutManager).setSmoothScrollbarEnabled(true);
         adapter_nodes = MultiTypeDataBoundAdapter(null, null)
@@ -88,7 +90,7 @@ class MainActivity : AppCompatActivity() {
                     override fun run() {
                         getAddresses?.cancel()
                         getAddresses = GetAddresses(this@MainActivity, peer, peerGroup)
-                        executor.schedule(getAddresses, 3000, TimeUnit.MILLISECONDS)
+                        executor.schedule(getAddresses, 6000, TimeUnit.MILLISECONDS)
                     }
                 }, executor)
             }
