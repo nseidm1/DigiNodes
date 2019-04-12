@@ -3,6 +3,7 @@ package com.noahseidman.digibytenodes
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.matthewmitchell.peercoinj.core.AbstractPeerEventListener
@@ -34,6 +35,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var adapter_info: MultiTypeDataBoundAdapter
     private val timer = Timer("Nodes", true)
     private lateinit var peerGroup: PeerGroup
+    private var peer = false
 
     private var getAddresses: GetAddresses? = null
 
@@ -46,6 +48,10 @@ class MainActivity : AppCompatActivity() {
             canceled = true
         }
 
+        fun isCanceled(): Boolean {
+            return canceled
+        }
+
         override fun run() {
             if (sendCount > 10) {
                 peerGroup.closeConnections()
@@ -55,7 +61,7 @@ class MainActivity : AppCompatActivity() {
                 activity.showMessage("sending getAddr: #" + sendCount)
                 peer.getAddresses()
                 sendCount++
-                activity.executor.schedule(this, 2500, TimeUnit.MILLISECONDS)
+                activity.executor.schedule(this, 3000, TimeUnit.MILLISECONDS)
             }
         }
     }
@@ -63,6 +69,8 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        setSupportActionBar(toolbar);
+        getSupportActionBar()?.setTitle(R.string.app_name);
         recycler_nodes.layoutManager = LinearLayoutManager(this)
         (recycler_nodes.layoutManager as LinearLayoutManager).setSmoothScrollbarEnabled(true);
         adapter_nodes = MultiTypeDataBoundAdapter(null, null)
@@ -80,7 +88,7 @@ class MainActivity : AppCompatActivity() {
                     override fun run() {
                         getAddresses?.cancel()
                         getAddresses = GetAddresses(this@MainActivity, peer, peerGroup)
-                        executor.schedule(getAddresses, 2500, TimeUnit.MILLISECONDS)
+                        executor.schedule(getAddresses, 3000, TimeUnit.MILLISECONDS)
                     }
                 }, executor)
             }
@@ -103,10 +111,11 @@ class MainActivity : AppCompatActivity() {
                         connections.addAll(filteredAddress)
                         getAddresses?.cancel()
                         peerGroup.closeConnections()
+                        this@MainActivity.peer = false
                         if (previousSize != connections.size) {
                             val list: List<PeerModel> = filteredAddress.map { PeerModel(it.addr.hostAddress, it.port) }
                             handler.post {
-                                count.text = "Count: " + connections.size
+                                count.text = "Nodes (" + connections.size + ")"
                                 adapter_nodes.addItems(list)
                                 (recycler_nodes.layoutManager as LinearLayoutManager).smoothScrollToPosition(recycler_nodes, null, connections.size)
                             }
@@ -118,25 +127,20 @@ class MainActivity : AppCompatActivity() {
             override fun onDnsDiscovery(addresses: Array<out InetSocketAddress>) {
                 showMessage("dns discovery")
                 for (address in addresses) {
-                    val peerAddress = PeerAddress(address.address, address.port)
-                    connections.add(peerAddress)
+                    connections.add(PeerAddress(address.address, address.port))
                     handler.post{
                         adapter_nodes.addItem(PeerModel(address.address.hostAddress, address.port))
                         (recycler_nodes.layoutManager as LinearLayoutManager).smoothScrollToPosition(recycler_nodes, null, connections.size)
                     }
                 }
-                handler.post { count.text = "Count: " + connections.size }
-
+                handler.post { count.text = "Nodes (" + connections.size + ")" }
             }
 
             override fun onPeerDisconnected(peer: Peer) {
-                if (!peer.alreadyDisconnectedFlag) {
-                    peer.alreadyDisconnectedFlag = true
-                } else {
-                    return
-                }
+                if (!peer.alreadyDisconnectedFlag) { peer.alreadyDisconnectedFlag = true } else { return }
                 getAddresses?.cancel()
                 peerGroup.closeConnections()
+                this@MainActivity.peer = false
                 showMessage("peer disconnected")
             }
         })
@@ -145,13 +149,10 @@ class MainActivity : AppCompatActivity() {
         peerGroup.startUp()
         executor.execute { requestNewPeer(peerGroup) }
         timer.schedule(object: TimerTask() {
-
             override fun run() {
-                if (!peerGroup.hasConnections()) {
-                    executor.execute { requestNewPeer(peerGroup) }
-                }
+                executor.execute { requestNewPeer(peerGroup) }
             }
-        }, 1000, 5000)
+        }, 2500, 2500)
     }
 
     override fun onDestroy() {
@@ -162,19 +163,26 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun requestNewPeer(peerGroup: PeerGroup) {
+        if (peer) {
+            return
+        }
+        handler.post {progress.visibility = View.VISIBLE }
         val peerAddress = connections.elementAt(random.nextInt(connections.size - 1))
-        if (!peerAddress.addr.isReachable(10) || peerAddress.addr is Inet6Address) {
+        if (!NetUtils.checkServerListening(peerAddress.addr.hostAddress, 12024, 100, null) || peerAddress.addr is Inet6Address) {
             requestNewPeer(peerGroup)
             return
         }
         showMessage("requesting new peer")
         executor.schedule( { peerGroup.connectTo(peerAddress) }, 1000, TimeUnit.MILLISECONDS)
+        peer = true
+        handler.post {progress.visibility = View.GONE }
     }
 
     private fun showMessage(message: String) {
         handler.post {
             adapter_info.addItem(InfoModel(message))
             (recycler_info.layoutManager as LinearLayoutManager).smoothScrollToPosition(recycler_info, null, adapter_info.itemCount)
+            messages.text = "Messages (" + adapter_info.itemCount + ")"
         }
     }
 }
