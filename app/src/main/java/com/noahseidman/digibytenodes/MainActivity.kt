@@ -250,7 +250,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         ByteStreams.copy(ByteArrayInputStream(Xembler(directives).xml().toByteArray(Charset.defaultCharset())), FileOutputStream(xmlFile))
 
         val zipFile = File(directory, "addresses.zip")
-        ZipUtil.pack(directory, zipFile);
+        ByteStreams.copy(ByteArrayInputStream(ZipUtil.packEntry(xmlFile)), FileOutputStream(zipFile))
 
         val uri = FileProvider.getUriForFile(this, "com.noahseidman.digibytenodes.fileprovider", zipFile)
         val resInfoList = getPackageManager().queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY);
@@ -261,6 +261,6 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         val intent = Intent(Intent.ACTION_SEND)
         intent.setType("file/zip")
         intent.putExtra(Intent.EXTRA_STREAM, uri);
-        handler.post{ shareActionProvider?.setShareIntent(intent) }
+        handler.post { shareActionProvider?.setShareIntent(intent) }
     }
 }
