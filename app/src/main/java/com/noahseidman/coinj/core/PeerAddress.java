@@ -82,6 +82,7 @@ public class PeerAddress extends ChildMessage implements Comparable {
         this.port = port;
         this.protocolVersion = protocolVersion;
         this.services = BigInteger.ZERO;
+        this.time = new Date(0);
         length = protocolVersion > 70000 ? MESSAGE_SIZE : MESSAGE_SIZE - 4;
     }
 

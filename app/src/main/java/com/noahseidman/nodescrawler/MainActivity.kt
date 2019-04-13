@@ -32,16 +32,14 @@ import java.net.InetSocketAddress
 import java.net.UnknownHostException
 import java.nio.charset.Charset
 import java.util.*
-import java.util.concurrent.ConcurrentSkipListSet
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.collections.HashSet
 
 
 class MainActivity : AppCompatActivity(), View.OnClickListener {
-    private val connections: ConcurrentSkipListSet<PeerAddress> = ConcurrentSkipListSet()
+    private val connections: HashSet<PeerAddress> = HashSet()
     private val openConnections: HashSet<PeerAddress> = HashSet()
-    private val recentNodes: HashSet<PeerAddress> = HashSet()
     private val handler = Handler(Looper.getMainLooper())
     private val random = Random()
     private val scheduledExecutor = Executors.newSingleThreadScheduledExecutor()
@@ -118,8 +116,8 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
             override fun onPeersDiscovered(peer: Peer, peerAddresses: List<PeerAddress>) {
                 scheduledExecutor.execute {
                     handler.post {progress.visibility = View.VISIBLE }
-                    updateTimestaps(peerAddresses)
-                    val filteredAddress = updateRecents(peerAddresses.filter { !contains(it, connections) })
+                    updateRecents(peerAddresses)
+                    val filteredAddress = peerAddresses.filter { !contains(it, connections) }
                     if (filteredAddress.isNotEmpty()) {
                         showMessage("getAddr received: " + filteredAddress.size)
                         val viewModels: List<PeerModel> = filteredAddress.map { PeerModel(it.addr.hostAddress, it.port) }
@@ -139,7 +137,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
                         showMessage("dns discovery: failed")
                     } else {
                         showMessage("dns discovery: success")
-                        val addresses = updateRecents(addresses.map { PeerAddress(it.address, it.port) })
+                        val addresses = addresses.map { PeerAddress(it.address, it.port) }
                         val viewModels: List<PeerModel> = addresses.map { PeerModel(it.addr.hostAddress, it.port) }
                         connections.addAll(addresses)
                         updateCounts(viewModels)
@@ -171,7 +169,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
 
     private fun updateCounts(viewModels: List<PeerModel>? = null) {
         handler.post {
-            count.text = String.format(getString(R.string.nodes), connections.size, openConnections.size, recentNodes.size)
+            count.text = String.format(getString(R.string.nodes), connections.size, openConnections.size, getRecentsCount())
             viewModels?.let {
                 adapter_nodes.addItems(viewModels)
                 (recycler_nodes.layoutManager as LinearLayoutManager).smoothScrollToPosition(recycler_nodes, null, connections.size)
@@ -293,23 +291,25 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         return false
     }
 
-    private fun updateRecents(filteredAddress: List<PeerAddress>): List<PeerAddress> {
+    private fun updateRecents(rawAddresses: List<PeerAddress>) {
         time.timeInMillis = System.currentTimeMillis()
-        time.add(Calendar.HOUR, -8);
-        val recentAddresses = filteredAddress.filter { it.time.after(time.time) }
+        time.add(Calendar.HOUR, -8)
+        val recentAddresses = rawAddresses.filter { it.time.after(time.time) && contains(it, connections) }
         if (recentAddresses.isNotEmpty()) {
+            connections.addAll(recentAddresses)
             updateCounts()
         }
-        return filteredAddress
     }
 
-    private fun updateTimestaps(rawAddresses: List<PeerAddress>)  {
+    private fun getRecentsCount(): Int {
+        time.timeInMillis = System.currentTimeMillis()
+        time.add(Calendar.HOUR, -8)
+        var count = 0
         for (peerAddress in connections) {
-            for (newAddress in rawAddresses) {
-                if (newAddress.equals(peerAddress) && newAddress.time.after(peerAddress.time)) {
-                    peerAddress.setTime(newAddress.time)
-                }
+            if (peerAddress.time.after(time.time)) {
+                count++
             }
         }
+        return count
     }
 }
