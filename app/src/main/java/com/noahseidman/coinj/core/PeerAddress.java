@@ -43,7 +43,7 @@ public class PeerAddress extends ChildMessage implements Comparable {
     private InetAddress addr;
     private int port;
     private BigInteger services;
-    private long time;
+    private Date time;
     public boolean open;
 
     /**
@@ -140,10 +140,11 @@ public class PeerAddress extends ChildMessage implements Comparable {
         //   uint64 services   (flags determining what the node can do)
         //   16 bytes ip address
         //   2 bytes port num
-        if (protocolVersion > 31402)
-            time = readUint32();
-        else
-            time = -1;
+        if (protocolVersion > 31402) {
+            time = new Date(readUint32() * 1000);
+        } else {
+            time = new Date(0);
+        }
         services = readUint64();
         byte[] addrBytes = readBytes(16);
         try {
@@ -223,19 +224,13 @@ public class PeerAddress extends ChildMessage implements Comparable {
      */
     public Date getTime() {
         maybeParse();
-        calendar.setTimeInMillis(time * 1000);
-        return calendar.getTime();
-    }
-
-    public long getLongTime() {
         return time;
     }
-
 
     /**
      * @param time the time to set
      */
-    public void setTime(long time) {
+    public void setTime(Date time) {
         unCache();
         this.time = time;
     }
@@ -257,7 +252,7 @@ public class PeerAddress extends ChildMessage implements Comparable {
 
     @Override
     public int hashCode() {
-        return addr.hashCode() ^ port ^ (int) time;
+        return addr.hashCode() ^ port;
     }
     
     public InetSocketAddress toSocketAddress() {

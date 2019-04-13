@@ -307,7 +307,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         for (peerAddress in connections) {
             for (newAddress in rawAddresses) {
                 if (newAddress.equals(peerAddress) && newAddress.time.after(peerAddress.time)) {
-                    peerAddress.setTime(newAddress.longTime)
+                    peerAddress.setTime(newAddress.time)
                 }
             }
         }
