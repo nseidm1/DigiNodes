@@ -41,6 +41,7 @@ import kotlin.collections.HashSet
 class MainActivity : AppCompatActivity(), View.OnClickListener {
     private val connections: ConcurrentSkipListSet<PeerAddress> = ConcurrentSkipListSet()
     private val openConnections: HashSet<PeerAddress> = HashSet()
+    private val recentNodes: HashSet<PeerAddress> = HashSet()
     private val handler = Handler(Looper.getMainLooper())
     private val random = Random()
     private val scheduledExecutor = Executors.newSingleThreadScheduledExecutor()
@@ -53,6 +54,8 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
     private var getAddresses: GetAddresses? = null
     private val slowOpenChecker: OpenChecker
     private val requestNewPeer: RequestNewPeer
+    private val time = Calendar.getInstance()
+
 
     init {
         slowOpenChecker = OpenChecker(this, 350)
@@ -115,7 +118,8 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
             override fun onPeersDiscovered(peer: Peer, peerAddresses: List<PeerAddress>) {
                 scheduledExecutor.execute {
                     handler.post {progress.visibility = View.VISIBLE }
-                    val filteredAddress = peerAddresses.filter { !contains(it, connections) }
+                    updateTimestaps(peerAddresses)
+                    val filteredAddress = updateRecents(peerAddresses.filter { !contains(it, connections) })
                     if (filteredAddress.isNotEmpty()) {
                         showMessage("getAddr received: " + filteredAddress.size)
                         val viewModels: List<PeerModel> = filteredAddress.map { PeerModel(it.addr.hostAddress, it.port) }
@@ -135,7 +139,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
                         showMessage("dns discovery: failed")
                     } else {
                         showMessage("dns discovery: success")
-                        val addresses = addresses.map { PeerAddress(it.address, it.port) }
+                        val addresses = updateRecents(addresses.map { PeerAddress(it.address, it.port) })
                         val viewModels: List<PeerModel> = addresses.map { PeerModel(it.addr.hostAddress, it.port) }
                         connections.addAll(addresses)
                         updateCounts(viewModels)
@@ -167,7 +171,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
 
     private fun updateCounts(viewModels: List<PeerModel>? = null) {
         handler.post {
-            count.text = String.format(getString(R.string.nodes), connections.size, openConnections.size)
+            count.text = String.format(getString(R.string.nodes), connections.size, openConnections.size, recentNodes.size)
             viewModels?.let {
                 adapter_nodes.addItems(viewModels)
                 (recycler_nodes.layoutManager as LinearLayoutManager).smoothScrollToPosition(recycler_nodes, null, connections.size)
@@ -287,5 +291,25 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
             }
         }
         return false
+    }
+
+    private fun updateRecents(filteredAddress: List<PeerAddress>): List<PeerAddress> {
+        time.timeInMillis = System.currentTimeMillis()
+        time.add(Calendar.HOUR, -8);
+        val recentAddresses = filteredAddress.filter { it.time.after(time.time) }
+        if (recentAddresses.isNotEmpty()) {
+            updateCounts()
+        }
+        return filteredAddress
+    }
+
+    private fun updateTimestaps(rawAddresses: List<PeerAddress>)  {
+        for (peerAddress in connections) {
+            for (newAddress in rawAddresses) {
+                if (newAddress.equals(peerAddress) && newAddress.time.after(peerAddress.time)) {
+                    peerAddress.setTime(newAddress.longTime)
+                }
+            }
+        }
     }
 }

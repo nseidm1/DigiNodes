@@ -24,6 +24,8 @@ import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.util.Calendar;
+import java.util.Date;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.noahseidman.coinj.core.Utils.uint32ToByteStreamLE;
@@ -36,6 +38,7 @@ import static com.noahseidman.coinj.core.Utils.uint64ToByteStreamLE;
 public class PeerAddress extends ChildMessage implements Comparable {
     private static final long serialVersionUID = 7501293709324197411L;
     static final int MESSAGE_SIZE = 30;
+    private static final Calendar calendar = Calendar.getInstance();
 
     private InetAddress addr;
     private int port;
@@ -218,8 +221,13 @@ public class PeerAddress extends ChildMessage implements Comparable {
     /**
      * @return the time
      */
-    public long getTime() {
+    public Date getTime() {
         maybeParse();
+        calendar.setTimeInMillis(time * 1000);
+        return calendar.getTime();
+    }
+
+    public long getLongTime() {
         return time;
     }
 
