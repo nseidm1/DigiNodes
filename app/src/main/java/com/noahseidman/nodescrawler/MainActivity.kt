@@ -69,7 +69,6 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         supportActionBar?.setIcon(R.mipmap.ic_launcher)
         supportActionBar?.setDisplayShowHomeEnabled(true)
         recycler_nodes.layoutManager = LinearLayoutManager(this)
-        (recycler_nodes.layoutManager as LinearLayoutManager).setSmoothScrollbarEnabled(true);
         adapter_nodes = MultiTypeDataBoundAdapter(null, null)
         recycler_nodes.adapter = adapter_nodes
 
