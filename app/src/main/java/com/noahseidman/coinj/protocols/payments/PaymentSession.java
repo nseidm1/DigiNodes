@@ -14,20 +14,20 @@
 
 package com.noahseidman.coinj.protocols.payments;
 
-import com.noahseidman.coinj.core.*;
-import com.noahseidman.coinj.crypto.TrustStoreLoader;
-import com.noahseidman.coinj.params.MainNetParams;
-import com.noahseidman.coinj.protocols.payments.PaymentProtocol.PkiVerificationData;
-import com.noahseidman.coinj.uri.PeercoinURI;
-import com.noahseidman.coinj.utils.Threading;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.noahseidman.coinj.core.*;
+import com.noahseidman.coinj.crypto.TrustStoreLoader;
+import com.noahseidman.coinj.protocols.payments.PaymentProtocol.PkiVerificationData;
+import com.noahseidman.coinj.uri.PeercoinURI;
+import com.noahseidman.coinj.utils.Threading;
+import com.noahseidman.nodescrawler.SelectedNetParams;
 
 import javax.annotation.Nullable;
-
-import java.io.*;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.net.*;
 import java.security.KeyStoreException;
 import java.util.ArrayList;
@@ -385,9 +385,9 @@ public class PaymentSession {
             if (paymentDetails == null)
                 throw new PaymentProtocolException("Invalid PaymentDetails");
             if (!paymentDetails.hasNetwork())
-                params = MainNetParams.get();
+                params = SelectedNetParams.instance;
             else
-                params = NetworkParameters.fromPmtProtocolID(paymentDetails.getNetwork());
+                params = SelectedNetParams.instance.fromPmtProtocolID(paymentDetails.getNetwork());
             if (params == null)
                 throw new PaymentProtocolException.InvalidNetwork("Invalid network " + paymentDetails.getNetwork());
             if (paymentDetails.getOutputsCount() < 1)
@@ -398,7 +398,7 @@ public class PaymentSession {
             }
             // This won't ever happen in practice. It would only happen if the user provided outputs
             // that are obviously invalid. Still, we don't want to silently overflow.
-            if (totalValue.compareTo(NetworkParameters.MAX_MONEY) > 0)
+            if (totalValue.compareTo(SelectedNetParams.instance.MAX_MONEY) > 0)
                 throw new PaymentProtocolException.InvalidOutputs("The outputs are way too big.");
         } catch (InvalidProtocolBufferException e) {
             throw new PaymentProtocolException(e);

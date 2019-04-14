@@ -18,6 +18,7 @@ package com.noahseidman.coinj.core;
 
 import com.noahseidman.coinj.script.Script;
 import com.noahseidman.coinj.script.ScriptBuilder;
+import com.noahseidman.nodescrawler.SelectedNetParams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -109,7 +110,7 @@ public class TransactionOutput extends ChildMessage implements Serializable {
         // Negative values obviously make no sense, except for -1 which is used as a sentinel value when calculating
         // SIGHASH_SINGLE signatures, so unfortunately we have to allow that here.
         checkArgument(value.signum() >= 0 || value.equals(Coin.NEGATIVE_SATOSHI), "Negative values not allowed");
-        checkArgument(value.compareTo(NetworkParameters.MAX_MONEY) < 0, "Values larger than MAX_MONEY not allowed");
+        checkArgument(value.compareTo(SelectedNetParams.instance.MAX_MONEY) < 0, "Values larger than MAX_MONEY not allowed");
         this.value = value.value;
         this.scriptBytes = scriptBytes;
         setParent(parent);

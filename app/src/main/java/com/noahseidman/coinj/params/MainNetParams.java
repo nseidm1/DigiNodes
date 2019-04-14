@@ -17,42 +17,34 @@
 package com.noahseidman.coinj.params;
 
 import com.noahseidman.coinj.core.NetworkParameters;
-import com.noahseidman.coinj.core.Sha256Hash;
-import com.noahseidman.nodescrawler.CoinDefinition;
+import com.noahseidman.nodescrawler.interfaces.Definition;
 
-/**
- * Parameters for the main production network on which people trade goods and services.
- */
 public class MainNetParams extends NetworkParameters {
-    public MainNetParams() {
+
+    private Definition definition;
+
+    private MainNetParams(Definition definition) {
         super();
-        interval = INTERVAL;
-        targetTimespan = TARGET_TIMESPAN;
-        maxTarget = CoinDefinition.proofOfWorkLimit;
-        dumpedPrivateKeyHeader = 128;
-        addressHeader = CoinDefinition.AddressHeader;
-        p2shHeader = CoinDefinition.p2shHeader;
+        this.definition = definition;
+        port = definition.getPort();
+        dnsSeeds = definition.getDnsSeeds();
+        PROTOCOL_VERSION = definition.getProtocolVersion();
+        MIN_PROTOCOL_VERSION = PROTOCOL_VERSION;
         acceptableAddressCodes = new int[] { addressHeader, p2shHeader };
-        port = CoinDefinition.Port;
-        packetMagic = CoinDefinition.PacketMagic;
-        bip32HeaderPub = 0x0488B21E; //The 4 byte header that serializes in base58 to "xpub".
-        bip32HeaderPriv = 0x0488ADE4; //The 4 byte header that serializes in base58 to "xprv"
+        packetMagic = definition.getPacketMagic();
+        PAYMENT_PROTOCOL_ID_MAINNET = "main";
+        coinName = definition.getCoinName();
+    }
 
-        genesisBlock.setDifficultyTarget(CoinDefinition.genesisBlockDifficultyTarget);
-        genesisBlock.setTime(CoinDefinition.genesisBlockTime);
-        genesisBlock.setNonce(CoinDefinition.genesisBlockNonce);
-        id = ID_MAINNET;
-        subsidyDecreaseBlockCount = CoinDefinition.subsidyDecreaseBlockCount;
-        spendableCoinbaseDepth = CoinDefinition.spendableCoinbaseDepth;
-        genesisBlock.setMerkleRoot(new Sha256Hash(CoinDefinition.genesisMerkleRoot));
-
-        dnsSeeds = CoinDefinition.dnsSeeds;
+    @Override
+    public boolean allowEmptyPeerChain() {
+        return definition.getAllowEmptyPeers();
     }
 
     private static MainNetParams instance;
-    public static synchronized MainNetParams get() {
+    public static synchronized MainNetParams get(Definition definition) {
         if (instance == null) {
-            instance = new MainNetParams();
+            instance = new MainNetParams(definition);
         }
         return instance;
     }

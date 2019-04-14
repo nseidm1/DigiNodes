@@ -27,11 +27,11 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.protobuf.ByteString;
+import com.noahseidman.nodescrawler.SelectedNetParams;
 import net.jcip.annotations.GuardedBy;
 import com.noahseidman.coinj.protocols.payments.Protos.PaymentDetails;
 import com.noahseidman.coinj.core.TransactionConfidence.ConfidenceType;
 import com.noahseidman.coinj.crypto.*;
-import com.noahseidman.coinj.params.UnitTestParams;
 import com.noahseidman.coinj.script.Script;
 import com.noahseidman.coinj.script.ScriptBuilder;
 import com.noahseidman.coinj.script.ScriptChunk;
@@ -2830,7 +2830,7 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
         try {
             checkNotNull(selector);
             LinkedList<TransactionOutput> candidates = calculateAllSpendCandidates(true);
-            CoinSelection selection = selector.select(NetworkParameters.MAX_MONEY, candidates);
+            CoinSelection selection = selector.select(SelectedNetParams.instance.MAX_MONEY, candidates);
             return selection.valueGathered;
         } finally {
             lock.unlock();
@@ -2851,7 +2851,7 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
         try {
             checkNotNull(selector);
             List<TransactionOutput> candidates = getWatchedOutputs(true);
-            CoinSelection selection = selector.select(NetworkParameters.MAX_MONEY, candidates);
+            CoinSelection selection = selector.select(SelectedNetParams.instance.MAX_MONEY, candidates);
             return selection.valueGathered;
         } finally {
             lock.unlock();
@@ -3190,8 +3190,6 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
      */
     public Transaction createSend(Address address, Coin value) throws InsufficientMoneyException {
         SendRequest req = SendRequest.to(address, value);
-        if (params == UnitTestParams.get())
-            req.shuffleOutputs = false;
         completeTx(req);
         return req.tx;
     }
@@ -3397,7 +3395,7 @@ public class Wallet extends BaseTaggableObject implements Serializable, BlockCha
                 // of the total value we can currently spend as determined by the selector, and then subtracting the fee.
                 checkState(req.tx.getOutputs().size() == 1, "Empty wallet TX must have a single output only.");
                 CoinSelector selector = req.coinSelector == null ? coinSelector : req.coinSelector;
-                bestCoinSelection = selector.select(NetworkParameters.MAX_MONEY, candidates);
+                bestCoinSelection = selector.select(SelectedNetParams.instance.MAX_MONEY, candidates);
                 candidates = null;  // Selector took ownership and might have changed candidates. Don't access again.
                 req.tx.getOutput(0).setValue(bestCoinSelection.valueGathered);
                 log.info("  emptying {}", bestCoinSelection.valueGathered.toFriendlyString());

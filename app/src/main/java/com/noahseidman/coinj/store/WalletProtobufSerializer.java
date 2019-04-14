@@ -36,6 +36,7 @@ import com.google.protobuf.WireFormat;
 
 import com.noahseidman.coinj.wallet.Protos;
 import com.noahseidman.coinj.wallet.Protos.Wallet.EncryptionType;
+import com.noahseidman.nodescrawler.SelectedNetParams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -384,7 +385,7 @@ public class WalletProtobufSerializer {
         try {
             Protos.Wallet walletProto = parseToProto(input);
             final String paramsID = walletProto.getNetworkIdentifier();
-            NetworkParameters params = NetworkParameters.fromID(paramsID);
+            NetworkParameters params = SelectedNetParams.instance.fromID(paramsID);
             if (params == null)
                 throw new UnreadableWalletException("Unknown network parameters ID " + paramsID);
             return readWallet(params, null, walletProto);
@@ -745,7 +746,7 @@ public class WalletProtobufSerializer {
             if (field != 1) // network_identifier
                 return false;
             final String network = cis.readString();
-            return NetworkParameters.fromID(network) != null;
+            return SelectedNetParams.instance.fromID(network) != null;
         } catch (IOException x) {
             return false;
         }

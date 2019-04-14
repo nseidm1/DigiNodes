@@ -23,6 +23,7 @@ import com.noahseidman.coinj.store.BlockStoreException;
 import com.noahseidman.coinj.store.FullPrunedBlockStore;
 import com.noahseidman.coinj.store.ValidHashStore;
 
+import com.noahseidman.nodescrawler.SelectedNetParams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -165,7 +166,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
         LinkedList<StoredTransactionOutput> txOutsCreated = new LinkedList<StoredTransactionOutput>();  
         long sigOps = 0;
         final Set<VerifyFlag> verifyFlags = EnumSet.noneOf(VerifyFlag.class);
-        if (block.getTimeSeconds() >= NetworkParameters.BIP16_ENFORCE_TIME)
+        if (block.getTimeSeconds() >= SelectedNetParams.instance.BIP16_ENFORCE_TIME)
             verifyFlags.add(VerifyFlag.P2SH);
 
         if (scriptVerificationExecutor.isShutdown())
@@ -234,7 +235,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
                 }
                 // All values were already checked for being non-negative (as it is verified in Transaction.verify())
                 // but we check again here just for defence in depth. Transactions with zero output value are OK.
-                if (valueOut.signum() < 0 || valueOut.compareTo(NetworkParameters.MAX_MONEY) > 0)
+                if (valueOut.signum() < 0 || valueOut.compareTo(SelectedNetParams.instance.MAX_MONEY) > 0)
                     throw new VerificationException("Transaction output value out of range");
                 
                 if (!isCoinBase && runScripts) {
@@ -294,7 +295,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
                 LinkedList<StoredTransactionOutput> txOutsCreated = new LinkedList<StoredTransactionOutput>();
                 long sigOps = 0;
                 final Set<VerifyFlag> verifyFlags = EnumSet.noneOf(VerifyFlag.class);
-                if (newBlock.getHeader().getTimeSeconds() >= NetworkParameters.BIP16_ENFORCE_TIME)
+                if (newBlock.getHeader().getTimeSeconds() >= SelectedNetParams.instance.BIP16_ENFORCE_TIME)
                     verifyFlags.add(VerifyFlag.P2SH);
                 if (!params.isCheckpoint(newBlock.getHeight())) {
                     for(Transaction tx : transactions) {
@@ -347,7 +348,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
                     }
                     // All values were already checked for being non-negative (as it is verified in Transaction.verify())
                     // but we check again here just for defence in depth. Transactions with zero output value are OK.
-                    if (valueOut.signum() < 0 || valueOut.compareTo(NetworkParameters.MAX_MONEY) > 0)
+                    if (valueOut.signum() < 0 || valueOut.compareTo(SelectedNetParams.instance.MAX_MONEY) > 0)
                         throw new VerificationException("Transaction output value out of range");
                     
                     if (!isCoinBase) {

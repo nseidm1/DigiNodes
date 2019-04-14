@@ -18,6 +18,7 @@ package com.noahseidman.coinj.core;
 
 import com.noahseidman.coinj.utils.MonetaryFormat;
 import com.google.common.math.LongMath;
+import com.noahseidman.nodescrawler.SelectedNetParams;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -80,11 +81,7 @@ public final class Coin implements Monetary, Comparable<Coin>, Serializable {
      */
     public final long value;
 
-    private final long MAX_SATOSHIS = COIN_VALUE * NetworkParameters.MAX_COINS;
-
     private Coin(final long satoshis) {
-        checkArgument(-MAX_SATOSHIS <= satoshis && satoshis <= MAX_SATOSHIS,
-            "%s satoshis exceeds maximum possible quantity of Peercoin.", satoshis);
         this.value = satoshis;
     }
 
@@ -113,7 +110,7 @@ public final class Coin implements Monetary, Comparable<Coin>, Serializable {
         checkArgument(cents >= 0);
         checkArgument(coins >= 0);
         final Coin coin = COIN.multiply(coins).add(CENT.multiply(cents));
-        checkArgument(coin.compareTo(NetworkParameters.MAX_MONEY) <= 0);
+        checkArgument(coin.compareTo(SelectedNetParams.instance.MAX_MONEY) <= 0);
         return coin;
     }
 

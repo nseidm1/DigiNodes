@@ -21,6 +21,7 @@ import com.noahseidman.coinj.utils.Threading;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.protobuf.ByteString;
+import com.noahseidman.nodescrawler.SelectedNetParams;
 import net.jcip.annotations.GuardedBy;
 import org.slf4j.LoggerFactory;
 
@@ -193,7 +194,7 @@ public class StoredPaymentChannelServerStates implements WalletExtension {
             ServerState.StoredServerPaymentChannels.Builder builder = ServerState.StoredServerPaymentChannels.newBuilder();
             for (StoredServerChannel channel : mapChannels.values()) {
                 // First a few asserts to make sure things won't break
-                checkState(channel.bestValueToMe.signum() >= 0 && channel.bestValueToMe.compareTo(NetworkParameters.MAX_MONEY) < 0);
+                checkState(channel.bestValueToMe.signum() >= 0 && channel.bestValueToMe.compareTo(SelectedNetParams.instance.MAX_MONEY) < 0);
                 checkState(channel.refundTransactionUnlockTimeSecs > 0);
                 checkNotNull(channel.myKey.getPrivKeyBytes());
                 ServerState.StoredServerPaymentChannel.Builder channelBuilder = ServerState.StoredServerPaymentChannel.newBuilder()

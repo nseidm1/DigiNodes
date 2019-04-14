@@ -18,6 +18,7 @@ package com.noahseidman.coinj.net.discovery;
 
 import com.noahseidman.coinj.core.*;
 import com.noahseidman.coinj.utils.Threading;
+import com.noahseidman.nodescrawler.SelectedNetParams;
 import net.jcip.annotations.GuardedBy;
 import org.slf4j.LoggerFactory;
 
@@ -86,7 +87,7 @@ public class PeerDBDiscovery implements PeerDiscovery {
         PeerData(InputStream input) throws IOException {
             byte[] peerAddress = new byte[30 + 8*3];
             checkState(input.read(peerAddress) == peerAddress.length);
-            address = new PeerAddress(params, peerAddress, 0, NetworkParameters.PROTOCOL_VERSION);
+            address = new PeerAddress(params, peerAddress, 0, SelectedNetParams.instance.PROTOCOL_VERSION);
             vTimeLastHeard = Utils.readInt64(peerAddress, 30);
             lastConnected = Utils.readInt64(peerAddress, 30 + 8);
             triedSinceLastConnection = Utils.readInt64(peerAddress, 30 + 16);

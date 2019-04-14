@@ -8,6 +8,8 @@
                                        android:layout_height="?android:attr/actionBarSize"
                                        android:background="@color/colorPrimary">
 
+        <androidx.appcompat.widget.AppCompatSpinner android:layout_width="wrap_content" android:id="@+id/spinner"
+                                                    android:layout_height="wrap_content" android:layout_gravity="start"/>
         <ProgressBar android:id="@+id/progress" android:layout_width="wrap_content" android:layout_height="wrap_content"
                      android:layout_gravity="end"/>
     </androidx.appcompat.widget.Toolbar>

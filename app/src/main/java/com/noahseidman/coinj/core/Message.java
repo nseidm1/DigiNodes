@@ -16,6 +16,7 @@
 
 package com.noahseidman.coinj.core;
 
+import com.noahseidman.nodescrawler.SelectedNetParams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -142,11 +143,11 @@ public abstract class Message implements Serializable {
     }
 
     Message(NetworkParameters params, byte[] payload, int offset) throws ProtocolException {
-        this(params, payload, offset, NetworkParameters.PROTOCOL_VERSION, false, false, UNKNOWN_LENGTH);
+        this(params, payload, offset, SelectedNetParams.instance.PROTOCOL_VERSION, false, false, UNKNOWN_LENGTH);
     }
 
     Message(NetworkParameters params, byte[] payload, int offset, boolean parseLazy, final boolean parseRetain, int length) throws ProtocolException {
-        this(params, payload, offset, NetworkParameters.PROTOCOL_VERSION, parseLazy, parseRetain, length);
+        this(params, payload, offset, SelectedNetParams.instance.PROTOCOL_VERSION, parseLazy, parseRetain, length);
     }
 
     // These methods handle the serialization/deserialization using the custom Peercoin protocol.

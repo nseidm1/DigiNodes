@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 
+import com.noahseidman.nodescrawler.SelectedNetParams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1223,7 +1224,7 @@ public class Transaction extends ChildMessage implements Serializable {
                     throw new VerificationException.NegativeValueOutput();
                 valueOut = valueOut.add(output.getValue());
                 // Duplicate the MAX_MONEY check from Coin.add() in case someone accidentally removes it.
-                if (valueOut.compareTo(NetworkParameters.MAX_MONEY) > 0)
+                if (valueOut.compareTo(SelectedNetParams.instance.MAX_MONEY) > 0)
                     throw new IllegalArgumentException();
             }
         } catch (IllegalStateException e) {

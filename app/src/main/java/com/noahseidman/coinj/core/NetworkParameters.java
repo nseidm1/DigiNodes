@@ -18,129 +18,45 @@
 package com.noahseidman.coinj.core;
 
 import com.google.common.base.Objects;
-import com.noahseidman.coinj.params.MainNetParams;
-import com.noahseidman.coinj.params.UnitTestParams;
-import com.noahseidman.coinj.script.Script;
-import com.noahseidman.coinj.script.ScriptOpCodes;
-import com.noahseidman.nodescrawler.CoinDefinition;
-import com.subgraph.orchid.encoders.Hex;
+import com.noahseidman.nodescrawler.SelectedNetParams;
 
 import javax.annotation.Nullable;
-import java.io.ByteArrayOutputStream;
 import java.io.Serializable;
-import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.Map;
 
-import static com.noahseidman.coinj.core.Coin.COIN;
-
-/**
- * <p>NetworkParameters contains the data needed for working with an instantiation of a Peercoin chain.</p>
- *
- * <p>This is an abstract class, concrete instantiations can be found in the params package. There are four:
- * one for the main network ({@link MainNetParams}), one for the public test network, and two others that are
- * intended for unit testing and local app development purposes. Although this class contains some aliases for
- * them, you are encouraged to call the static get() methods on each specific params class directly.</p>
- */
 public abstract class NetworkParameters implements Serializable {
-    /**
-     * The protocol version this library implements.
-     */
-    public static final int PROTOCOL_VERSION = CoinDefinition.PROTOCOL_VERSION;
 
-    /**
-     * The alert signing key.
-     */
-    public static final byte[] SATOSHI_KEY = Hex.decode(CoinDefinition.SATOSHI_KEY);
-
-    /** The string returned by getId() for the main, production network where people trade things. */
-    public static final String ID_MAINNET = CoinDefinition.ID_MAINNET;
-
-    /** The string used by the payment protocol to represent the main net. */
-    public static final String PAYMENT_PROTOCOL_ID_MAINNET = "main";
-
-    protected Block genesisBlock;
-    protected BigInteger maxTarget;
+    public abstract boolean allowEmptyPeerChain();
+    public static int PROTOCOL_VERSION;
+    public static int MIN_PROTOCOL_VERSION;
+    protected static String PAYMENT_PROTOCOL_ID_MAINNET;
+    static final int BIP16_ENFORCE_TIME = 1333238400;
+    public static Coin MAX_MONEY = Coin.ZERO;
+    private Block genesisBlock;
     protected int port;
     protected long packetMagic;
     protected int addressHeader;
     protected int p2shHeader;
-    protected int dumpedPrivateKeyHeader;
-    protected int interval;
-    protected int targetTimespan;
-    protected byte[] alertSigningKey;
     protected int bip32HeaderPub;
     protected int bip32HeaderPriv;
-
-    /**
-     * See getId(). This may be null for old deserialized wallets. In that case we derive it heuristically
-     * by looking at the port number.
-     */
     protected String id;
-
-    /**
-     * The depth of blocks required for a coinbase transaction to be spendable.
-     */
-    protected int spendableCoinbaseDepth;
-    protected int subsidyDecreaseBlockCount;
-
+    int spendableCoinbaseDepth;
     protected int[] acceptableAddressCodes;
     protected String[] dnsSeeds;
-    protected Map<Integer, Sha256Hash> checkpoints = new HashMap<Integer, Sha256Hash>();
+    private Map<Integer, Sha256Hash> checkpoints = new HashMap<Integer, Sha256Hash>();
+    protected int dumpedPrivateKeyHeader;
+    private byte[] alertSigningKey;
+    public String coinName;
 
     protected NetworkParameters() {
-        alertSigningKey = SATOSHI_KEY;
-        genesisBlock = createGenesis(this);
+        genesisBlock = new Block(this);
     }
-
-    private static Block createGenesis(NetworkParameters n) {
-        Block genesisBlock = new Block(n);
-        Transaction t = new Transaction(n);
-        try {
-            // A script containing the difficulty bits and the following message:
-            //
-
-            //   coin dependent
-            byte[] bytes = Hex.decode(CoinDefinition.genesisTxInBytes);
-            //byte[] bytes = Hex.decode("04ffff001d0104294469676974616c636f696e2c20412043757272656e637920666f722061204469676974616c20416765");
-            t.addInput(new TransactionInput(n, t, bytes));
-            ByteArrayOutputStream scriptPubKeyBytes = new ByteArrayOutputStream();
-            Script.writeBytes(scriptPubKeyBytes, Hex.decode(CoinDefinition.genesisTxOutBytes));
-            //("04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5f"));
-            scriptPubKeyBytes.write(ScriptOpCodes.OP_CHECKSIG);
-            t.addOutput(new TransactionOutput(n, t, Coin.valueOf(CoinDefinition.genesisBlockValue, 0), scriptPubKeyBytes.toByteArray()));
-        } catch (Exception e) {
-            // Cannot happen.
-            throw new RuntimeException(e);
-        }
-        genesisBlock.addTransaction(t);
-        return genesisBlock;
-    }
-
-    public static final int TARGET_TIMESPAN = CoinDefinition.TARGET_TIMESPAN;
-    public static final int TARGET_SPACING = CoinDefinition.TARGET_SPACING;
-    public static final int INTERVAL = CoinDefinition.INTERVAL;
-
-    /**
-     * Blocks with a timestamp after this should enforce BIP 16, aka "Pay to script hash". This BIP changed the
-     * network rules in a soft-forking manner, that is, blocks that don't follow the rules are accepted but not
-     * mined upon and thus will be quickly re-orged out as long as the majority are enforcing the rule.
-     */
-    public static final int BIP16_ENFORCE_TIME = 1333238400;
-
-    public static final long MAX_COINS = CoinDefinition.MAX_COINS;
-    public static final Coin MAX_MONEY = COIN.multiply(CoinDefinition.MAX_COINS);
 
     /** Alias for MainNetParams.get(), use that instead */
     @Deprecated
     public static NetworkParameters prodNet() {
-        return MainNetParams.get();
-    }
-
-    /** Returns a testnet params modified to allow any difficulty target. */
-    @Deprecated
-    public static NetworkParameters unitTests() {
-        return UnitTestParams.get();
+        return SelectedNetParams.instance;
     }
 
     /**
@@ -168,21 +84,13 @@ public abstract class NetworkParameters implements Serializable {
     /** Returns the network parameters for the given string ID or NULL if not recognized. */
     @Nullable
     public static NetworkParameters fromID(String id) {
-        if (id.equals(ID_MAINNET)) {
-            return MainNetParams.get();
-        } else {
-            return null;
-        }
+        return SelectedNetParams.instance;
     }
 
     /** Returns the network parameters for the given string paymentProtocolID or NULL if not recognized. */
     @Nullable
     public static NetworkParameters fromPmtProtocolID(String pmtProtocolId) {
-        if (pmtProtocolId.equals(PAYMENT_PROTOCOL_ID_MAINNET)) {
-            return MainNetParams.get();
-        } else {
-            return null;
-        }
+        return SelectedNetParams.instance;
     }
 
     public int getSpendableCoinbaseDepth() {
@@ -199,7 +107,7 @@ public abstract class NetworkParameters implements Serializable {
     /**
      * Returns true if the block height is either not a checkpoint, or is a checkpoint and the hash matches.
      */
-    public boolean passesCheckpoint(int height, Sha256Hash hash) {
+    boolean passesCheckpoint(int height, Sha256Hash hash) {
         Sha256Hash checkpointHash = checkpoints.get(height);
         return checkpointHash == null || checkpointHash.equals(hash);
     }
@@ -207,7 +115,7 @@ public abstract class NetworkParameters implements Serializable {
     /**
      * Returns true if the given height has a recorded checkpoint.
      */
-    public boolean isCheckpoint(int height) {
+    boolean isCheckpoint(int height) {
         Sha256Hash checkpointHash = checkpoints.get(height);
         return checkpointHash != null;
     }
@@ -264,38 +172,12 @@ public abstract class NetworkParameters implements Serializable {
     }
 
     /**
-     * How much time in seconds is supposed to pass between "interval" blocks. If the actual elapsed time is
-     * significantly different from this value, the network difficulty formula will produce a different value. Both
-     * test and production Peercoin networks use 2 weeks (1209600 seconds).
-     */
-    public int getTargetTimespan() {
-        return targetTimespan;
-    }
-
-    /**
      * The version codes that prefix addresses which are acceptable on this network. Although Satoshi intended these to
      * be used for "versioning", in fact they are today used to discriminate what kind of data is contained in the
      * address and to prevent accidentally sending coins across chains which would destroy them.
      */
     public int[] getAcceptableAddressCodes() {
         return acceptableAddressCodes;
-    }
-
-    /**
-     * If we are running in testnet-in-a-box mode, we allow connections to nodes with 0 non-genesis blocks.
-     */
-    public boolean allowEmptyPeerChain() {
-        return CoinDefinition.allowEmptyPeers;
-    }
-
-    /** How many blocks pass between difficulty adjustment periods. Peercoin standardises this to be 2015. */
-    public int getInterval() {
-        return interval;
-    }
-
-    /** Maximum target represents the easiest allowable proof of work. */
-    public BigInteger getMaxTarget() {
-        return maxTarget;
     }
 
     /**
@@ -311,18 +193,5 @@ public abstract class NetworkParameters implements Serializable {
      */
     public Monetary parseCoin(String str) {
         return Coin.parseCoin(str);
-    }
-
-    /** Returns the 4 byte header for BIP32 (HD) wallet - public key part. */
-    public int getBip32HeaderPub() {
-        return bip32HeaderPub;
-    }
-
-    /** Returns the 4 byte header for BIP32 (HD) wallet - private key part. */
-    public int getBip32HeaderPriv() {
-        return bip32HeaderPriv;
-    }
-    public int getSubsidyDecreaseBlockCount() {
-        return subsidyDecreaseBlockCount;
     }
 }

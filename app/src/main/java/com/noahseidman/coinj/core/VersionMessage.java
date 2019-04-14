@@ -16,7 +16,7 @@
 
 package com.noahseidman.coinj.core;
 
-import com.noahseidman.nodescrawler.CoinDefinition;
+import com.noahseidman.nodescrawler.SelectedNetParams;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -78,7 +78,7 @@ public class VersionMessage extends Message {
     /** The version of this library release, as a string. */
     public static final String BITCOINJ_VERSION = ".1-Crawler";
     /** The value that is prepended to the subVer field of this application. */
-    public static final String LIBRARY_SUBVER = "/"+ CoinDefinition.coinName+":" + BITCOINJ_VERSION + "/";
+    public static final String LIBRARY_SUBVER = "/"+ SelectedNetParams.instance.coinName+":" + BITCOINJ_VERSION + "/";
 
     public VersionMessage(NetworkParameters params, byte[] payload) throws ProtocolException {
         super(params, payload, 0);
@@ -90,7 +90,7 @@ public class VersionMessage extends Message {
 
     public VersionMessage(NetworkParameters params, int newBestHeight) {
         super(params);
-        clientVersion = NetworkParameters.PROTOCOL_VERSION;
+        clientVersion = SelectedNetParams.instance.PROTOCOL_VERSION;
         localServices = 0;
         time = System.currentTimeMillis() / 1000;
         // Note that the official client doesn't do anything with these, and finding out your own external IP address
@@ -306,6 +306,6 @@ public class VersionMessage extends Message {
      * is available and the memory pool of the remote peer will be queried when the downloadData property is true.
      */
     public boolean isBloomFilteringSupported() {
-        return clientVersion >= FilteredBlock.MIN_PROTOCOL_VERSION && CoinDefinition.supportsBloomFiltering;
+        return clientVersion >= FilteredBlock.MIN_PROTOCOL_VERSION;
     }
 }

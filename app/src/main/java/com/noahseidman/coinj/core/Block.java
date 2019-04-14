@@ -16,18 +16,16 @@
 
 package com.noahseidman.coinj.core;
 
-import com.hashengineering.crypto.X15;
-import com.noahseidman.coinj.script.Script;
-import com.noahseidman.coinj.script.ScriptBuilder;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-
+import com.hashengineering.crypto.X15;
+import com.noahseidman.coinj.script.Script;
+import com.noahseidman.coinj.script.ScriptBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -38,7 +36,6 @@ import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 
-import static com.noahseidman.coinj.core.Utils.doubleDigest;
 import static com.noahseidman.coinj.core.Utils.doubleDigestTwoBuffers;
 
 /**
@@ -644,8 +641,6 @@ public class Block extends Message {
     public BigInteger getDifficultyTargetAsInteger() throws VerificationException {
         maybeParseHeader();
         BigInteger target = Utils.decodeCompactBits(difficultyTarget);
-        if (target.signum() <= 0 || target.compareTo(params.maxTarget) > 0)
-            throw new VerificationException("Difficulty target is bad: " + target.toString());
         return target;
     }
 

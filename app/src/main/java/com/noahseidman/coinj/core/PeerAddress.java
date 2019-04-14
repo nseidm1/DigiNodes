@@ -16,7 +16,7 @@
 
 package com.noahseidman.coinj.core;
 
-import com.noahseidman.coinj.params.MainNetParams;
+import com.noahseidman.nodescrawler.SelectedNetParams;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -90,14 +90,14 @@ public class PeerAddress extends ChildMessage implements Comparable {
      * Constructs a peer address from the given IP address and port. Protocol version is the default.
      */
     public PeerAddress(InetAddress addr, int port) {
-        this(addr, port, NetworkParameters.PROTOCOL_VERSION);
+        this(addr, port, SelectedNetParams.instance.PROTOCOL_VERSION);
     }
 
     /**
      * Constructs a peer address from the given IP address. Port and protocol version are default for the prodnet.
      */
     public PeerAddress(InetAddress addr) {
-        this(addr, MainNetParams.get().getPort());
+        this(addr, SelectedNetParams.instance.getPort());
     }
 
     public PeerAddress(InetSocketAddress addr) {

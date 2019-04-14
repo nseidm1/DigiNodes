@@ -2,4 +2,6 @@
     <string name="app_name">DigiByte Node Crawler</string>
     <string name="messages">Messages (%s)</string>
     <string name="nodes">Nodes (%s) Open (%s) Recent (%s)</string>
+    <string name="digibyte">DigiByte</string>
+    <string name="bitcoin">Bitcoin</string>
 </resources>

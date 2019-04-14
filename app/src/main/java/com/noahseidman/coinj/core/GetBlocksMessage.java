@@ -16,6 +16,8 @@
 
 package com.noahseidman.coinj.core;
 
+import com.noahseidman.nodescrawler.SelectedNetParams;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
@@ -88,7 +90,7 @@ public class GetBlocksMessage extends Message {
     @Override
     protected void peercoinSerializeToStream(OutputStream stream) throws IOException {
         // Version, for some reason.
-        Utils.uint32ToByteStreamLE(NetworkParameters.PROTOCOL_VERSION, stream);
+        Utils.uint32ToByteStreamLE(SelectedNetParams.instance.PROTOCOL_VERSION, stream);
         // Then a vector of block hashes. This is actually a "block locator", a set of block
         // identifiers that spans the entire chain with exponentially increasing gaps between
         // them, until we end up at the genesis block. See CBlockLocator::Set()

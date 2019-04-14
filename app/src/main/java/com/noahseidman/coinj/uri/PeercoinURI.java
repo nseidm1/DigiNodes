@@ -18,27 +18,17 @@
 
 package com.noahseidman.coinj.uri;
 
-import com.noahseidman.coinj.core.Address;
-import com.noahseidman.coinj.core.AddressFormatException;
-import com.noahseidman.coinj.core.Coin;
-import com.noahseidman.coinj.core.Monetary;
-import com.noahseidman.coinj.core.NetworkParameters;
-import com.noahseidman.coinj.params.MainNetParams;
+import com.noahseidman.coinj.core.*;
+import com.noahseidman.nodescrawler.SelectedNetParams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
-
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -111,7 +101,7 @@ public class PeercoinURI {
      * @throws PeercoinURIParseException if the URI is not syntactically or semantically valid.
      */
     public PeercoinURI(String uri) throws PeercoinURIParseException {
-        this(MainNetParams.get(), uri);
+        this(SelectedNetParams.instance, uri);
     }
 
     /**

@@ -17,19 +17,13 @@
 
 package com.noahseidman.coinj.wallet;
 
-import com.noahseidman.coinj.core.Coin;
-import com.noahseidman.coinj.core.NetworkParameters;
-import com.noahseidman.coinj.core.Transaction;
-import com.noahseidman.coinj.core.TransactionConfidence;
-import com.noahseidman.coinj.core.TransactionInput;
-import com.noahseidman.coinj.core.TransactionOutput;
-import com.noahseidman.coinj.core.Wallet;
+import com.noahseidman.coinj.core.*;
 import com.noahseidman.coinj.script.ScriptChunk;
+import com.noahseidman.nodescrawler.SelectedNetParams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
-
 import java.util.List;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -171,7 +165,7 @@ public class DefaultRiskAnalysis implements RiskAnalysis {
     private Result analyzeIsStandard() {
         // The IsStandard rules don't apply on testnet, because they're just a safety mechanism and we don't want to
         // crush innovation with valueless test coins.
-        if (!wallet.getNetworkParameters().getId().equals(NetworkParameters.ID_MAINNET))
+        if (!wallet.getNetworkParameters().getId().equals(SelectedNetParams.instance.getPaymentProtocolId()))
             return Result.OK;
 
         RuleViolation ruleViolation = isStandard(tx);

@@ -1,12 +1,11 @@
 package com.noahseidman.coinj.wallet;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.noahseidman.coinj.core.Coin;
-import com.noahseidman.coinj.core.NetworkParameters;
 import com.noahseidman.coinj.core.Transaction;
 import com.noahseidman.coinj.core.TransactionConfidence;
 import com.noahseidman.coinj.core.TransactionOutput;
-import com.noahseidman.coinj.params.UnitTestParams;
-import com.google.common.annotations.VisibleForTesting;
+import com.noahseidman.nodescrawler.SelectedNetParams;
 
 import java.math.BigInteger;
 import java.util.*;
@@ -26,7 +25,7 @@ public class DefaultCoinSelector implements CoinSelector {
         ArrayList<TransactionOutput> sortedOutputs = new ArrayList<TransactionOutput>(candidates);
         // When calculating the wallet balance, we may be asked to select all possible coins, if so, avoid sorting
         // them in order to improve performance.
-        if (!biTarget.equals(NetworkParameters.MAX_MONEY)) {
+        if (!biTarget.equals(SelectedNetParams.instance.MAX_MONEY)) {
             sortOutputs(sortedOutputs);
         }
         // Now iterate over the sorted outputs until we have got as close to the target as possible or a little
@@ -88,6 +87,6 @@ public class DefaultCoinSelector implements CoinSelector {
                confidence.getSource().equals(TransactionConfidence.Source.SELF) &&
                // In unittest mode we expect to have only one peer, so we won't see transactions propagate.
                // TODO: The value 1 below dates from a time when transactions we broadcast *to* were counted, set to 0
-               (confidence.numBroadcastPeers() > 1 || tx.getParams() == UnitTestParams.get());
+               (confidence.numBroadcastPeers() > 1);
     }
 }

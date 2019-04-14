@@ -18,6 +18,7 @@ package com.noahseidman.coinj.params;
 
 import com.google.common.collect.Lists;
 import com.noahseidman.coinj.core.NetworkParameters;
+import com.noahseidman.nodescrawler.SelectedNetParams;
 
 import java.util.Collection;
 import java.util.List;
@@ -29,7 +30,7 @@ import java.util.List;
 public class Networks {
 
     /** Registered networks */
-    private static List<NetworkParameters> networks = Lists.newArrayList((NetworkParameters)MainNetParams.get());
+    private static List<NetworkParameters> networks = Lists.newArrayList(SelectedNetParams.instance);
 
     public static List<NetworkParameters> get() {
         return networks;

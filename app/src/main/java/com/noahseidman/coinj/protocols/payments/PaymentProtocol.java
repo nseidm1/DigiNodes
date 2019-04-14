@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.noahseidman.nodescrawler.SelectedNetParams;
 
 import javax.annotation.Nullable;
 import java.io.Serializable;
@@ -397,7 +398,7 @@ public class PaymentProtocol {
     public static Protos.Output createPayToAddressOutput(@Nullable Coin amount, Address address) {
         Protos.Output.Builder output = Protos.Output.newBuilder();
         if (amount != null) {
-            if (amount.compareTo(NetworkParameters.MAX_MONEY) > 0)
+            if (amount.compareTo(SelectedNetParams.instance.MAX_MONEY) > 0)
                 throw new IllegalArgumentException("Amount too big: " + amount);
             output.setAmount(amount.value);
         } else {

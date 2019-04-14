@@ -22,6 +22,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.HashMultimap;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.protobuf.ByteString;
+import com.noahseidman.nodescrawler.SelectedNetParams;
 import net.jcip.annotations.GuardedBy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -262,8 +263,8 @@ public class StoredPaymentChannelClientStates implements WalletExtension {
             ClientState.StoredClientPaymentChannels.Builder builder = ClientState.StoredClientPaymentChannels.newBuilder();
             for (StoredClientChannel channel : mapChannels.values()) {
                 // First a few asserts to make sure things won't break
-                checkState(channel.valueToMe.signum() >= 0 && channel.valueToMe.compareTo(NetworkParameters.MAX_MONEY) < 0);
-                checkState(channel.refundFees.signum() >= 0 && channel.refundFees.compareTo(NetworkParameters.MAX_MONEY) < 0);
+                checkState(channel.valueToMe.signum() >= 0 && channel.valueToMe.compareTo(SelectedNetParams.instance.MAX_MONEY) < 0);
+                checkState(channel.refundFees.signum() >= 0 && channel.refundFees.compareTo(SelectedNetParams.instance.MAX_MONEY) < 0);
                 checkNotNull(channel.myKey.getPrivKeyBytes());
                 checkState(channel.refund.getConfidence().getSource() == TransactionConfidence.Source.SELF);
                 final ClientState.StoredClientPaymentChannel.Builder value = ClientState.StoredClientPaymentChannel.newBuilder()

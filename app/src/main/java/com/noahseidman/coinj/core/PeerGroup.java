@@ -22,7 +22,7 @@ import com.noahseidman.coinj.net.NioClientManager;
 import com.noahseidman.coinj.net.discovery.PeerDiscovery;
 import com.noahseidman.coinj.net.discovery.PeerDiscoveryException;
 import com.noahseidman.coinj.utils.ListenerRegistration;
-import com.noahseidman.nodescrawler.CoinDefinition;
+import com.noahseidman.nodescrawler.SelectedNetParams;
 import net.jcip.annotations.GuardedBy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,7 +40,7 @@ public class PeerGroup {
     private final CopyOnWriteArrayList<ListenerRegistration<PeerEventListener>> peerEventListeners;
     private final CopyOnWriteArraySet<PeerDiscovery> peerDiscoverers;
     @GuardedBy("lock") private VersionMessage versionMessage;
-    private volatile int vMinRequiredProtocolVersion = CoinDefinition.MIN_PROTOCOL_VERSION;
+    private volatile int vMinRequiredProtocolVersion = SelectedNetParams.instance.MIN_PROTOCOL_VERSION;
     private final NetworkParameters params;
     private MemoryPool pool = new MemoryPool();
     private Executor executor = Executors.newSingleThreadExecutor();

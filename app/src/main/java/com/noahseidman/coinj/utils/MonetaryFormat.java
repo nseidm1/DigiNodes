@@ -16,23 +16,16 @@
 
 package com.noahseidman.coinj.utils;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
-import static com.google.common.math.LongMath.checkedMultiply;
-import static com.google.common.math.LongMath.checkedPow;
-import static com.google.common.math.LongMath.divide;
+import com.noahseidman.coinj.core.Coin;
+import com.noahseidman.coinj.core.Monetary;
 
 import java.math.RoundingMode;
 import java.text.DecimalFormatSymbols;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
-import com.noahseidman.coinj.core.Coin;
-import com.noahseidman.coinj.core.Monetary;
-import com.noahseidman.coinj.shapeshift.ShapeShiftMonetary;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.math.LongMath.*;
 
 /**
  * <p>
@@ -224,14 +217,6 @@ public final class MonetaryFormat {
                     shift, roundingMode, null, codeSeparator, codePrefixed);
     }
 
-    /**
-     * Configure currency code for given decimal separator shift. This configuration is not relevant for parsing.
-     * 
-     * @param codeShift
-     *            decimal separator shift, see {@link #shift()}
-     * @param code
-     *            currency code
-     */
     public MonetaryFormat code(int codeShift, String code) {
         checkArgument(codeShift >= 0);
         Map<Integer, String> codes = new HashMap<Integer, String>();
@@ -410,29 +395,6 @@ public final class MonetaryFormat {
      */
     public Coin parse(String str) throws NumberFormatException {
         return Coin.valueOf(parseValue(str, Coin.SMALLEST_UNIT_EXPONENT));
-    }
-
-    /**
-     * Parse a human readable fiat value to a {@link com.noahseidman.coinj.core.Fiat} instance.
-     * 
-     * @throws NumberFormatException
-     *             if the string cannot be parsed for some reason
-     */
-    public Fiat parseFiat(String currencyCode, String str) throws NumberFormatException {
-        return Fiat.valueOf(currencyCode, parseValue(str, Fiat.SMALLEST_UNIT_EXPONENT));
-    }
-
-    /**
-     * Gets a {@link com.noahseidman.coinj.shapeshift.ShapeShiftMonetary} for a string formatted with the MonetaryFormat
-     *
-     * @params amount The string for the Shapeshift coin amount
-     * @params smallestUnitExponent The number of decimal places for the coin
-     *
-     * @throws NumberFormatException
-     *             if the string cannot be parsed for some reason
-     */
-    public ShapeShiftMonetary parseShapeShiftCoin(String amount, int smallestUnitExponent) throws NumberFormatException {
-        return new ShapeShiftMonetary(parseValue(amount, smallestUnitExponent), smallestUnitExponent);
     }
 
     private long parseValue(String str, int smallestUnitExponent) {
