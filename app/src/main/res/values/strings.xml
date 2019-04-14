@@ -4,7 +4,6 @@
     <string name="nodes">Nodes (%s) Open (%s) Recent (%s)</string>
     <string name="digibyte">DigiByte</string>
     <string name="bitcoin">Bitcoin</string>
-    <string name="syscoin">Syscoin</string>
     <string name="vertcoin">Vertcoin</string>
     <string name="rapids">Rapids</string>
     <string name="doge">Doge</string>
@@ -14,4 +13,11 @@
     <string name="bitcoincash">Bitcoin Cash</string>
     <string name="bitcoindiamond">Bitcoin Diamond</string>
     <string name="bitcoinsv">Bitcoin SV</string>
+    <string name="litecoin">Litecoin</string>
+    <string name="verge">Verge</string>
+    <string name="syscoin">Syscoin</string>
+    <string name="block">Blocknet</string>
+    <string name="zcoin">Zcoin</string>
+    <string name="komodo">Komodo</string>
+    <string name="stratis">Stratis</string>
 </resources>
