@@ -38,8 +38,6 @@ public abstract class NetworkParameters implements Serializable {
     protected long packetMagic;
     protected int addressHeader;
     protected int p2shHeader;
-    protected int bip32HeaderPub;
-    protected int bip32HeaderPriv;
     protected String id;
     int spendableCoinbaseDepth;
     protected int[] acceptableAddressCodes;

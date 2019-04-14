@@ -4,4 +4,6 @@
     <string name="nodes">Nodes (%s) Open (%s) Recent (%s)</string>
     <string name="digibyte">DigiByte</string>
     <string name="bitcoin">Bitcoin</string>
+    <string name="syscoin">Syscoin</string>
+    <string name="vertcoin">Vertcoin</string>
 </resources>

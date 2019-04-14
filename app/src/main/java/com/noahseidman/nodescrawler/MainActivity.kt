@@ -18,8 +18,10 @@ import com.google.common.io.ByteStreams
 import com.noahseidman.coinj.core.*
 import com.noahseidman.coinj.net.discovery.DnsDiscovery
 import com.noahseidman.nodescrawler.adapter.MultiTypeDataBoundAdapter
+import com.noahseidman.nodescrawler.coindefinitions.BitcoinCoinDefition
+import com.noahseidman.nodescrawler.coindefinitions.DigiByteCoinDefition
+import com.noahseidman.nodescrawler.coindefinitions.VertCoinDefinition
 import com.noahseidman.nodescrawler.interfaces.OnShutdownCompleteCallback
-import com.noahseidman.nodescrawler.netparams.digibyte.DigiByteCoinDefition
 import kotlinx.android.synthetic.main.activity_main.*
 import org.xembly.Directives
 import org.xembly.Xembler
@@ -43,27 +45,16 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     private val connections: HashSet<PeerAddress> = HashSet()
     private val openConnections: HashSet<PeerAddress> = HashSet()
     private val handler = Handler(Looper.getMainLooper())
-    private val random = Random()
     private lateinit var adapter_nodes: MultiTypeDataBoundAdapter
     private lateinit var adapter_info: MultiTypeDataBoundAdapter
-    private var scheduledExecutor: ScheduledExecutorService? = null
-    private var openCheckerExecutor: ScheduledExecutorService? = null
+    private var scheduledExecutor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
+    private var openCheckerExecutor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
     private var peerGroup: PeerGroup? = null
     private var shareActionProvider: ShareActionProvider? = null
     private var getAddresses: GetAddressesRunnable? = null
-    private val slowOpenCheckerRunnable: OpenCheckerRunnable
-    private val requestNewPeerRunnable: RequestNewPeerRunnable
     private val calendar = Calendar.getInstance()
 
     private var getNewPeerFlag = true
-
-
-    init {
-        slowOpenCheckerRunnable = OpenCheckerRunnable(this, 350)
-        requestNewPeerRunnable = RequestNewPeerRunnable(this)
-        scheduledExecutor = Executors.newSingleThreadScheduledExecutor()
-        openCheckerExecutor = Executors.newSingleThreadScheduledExecutor()
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -82,7 +73,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
         adapter_info = MultiTypeDataBoundAdapter(null, null)
         recycler_info.adapter = adapter_info
 
-        val coins = arrayOf(getString(R.string.digibyte), getString(R.string.bitcoin))
+        val coins = arrayOf(getString(R.string.digibyte), getString(R.string.bitcoin), getString(R.string.vertcoin))
         val adapter = ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, coins)
         spinner.adapter = adapter
         spinner.onItemSelectedListener = this
@@ -90,15 +81,13 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
 
     override fun onDestroy() {
         super.onDestroy()
-        shutdownExistingPeer(null, true)
+        shutdownExistingPeer()
     }
 
     private fun init(networkParameters: NetworkParameters) {
-        scheduledExecutor = Executors.newSingleThreadScheduledExecutor()
-        openCheckerExecutor = Executors.newSingleThreadScheduledExecutor()
-        scheduledExecutor!!.scheduleAtFixedRate(requestNewPeerRunnable, 2500, 2500, TimeUnit.MILLISECONDS)
-        openCheckerExecutor!!.scheduleAtFixedRate(slowOpenCheckerRunnable, 2500, 1/* has to be greater than 0, contains a blocking operation to slow it down */, TimeUnit.MILLISECONDS)
-        scheduledExecutor!!.execute {
+        scheduledExecutor.scheduleAtFixedRate(RequestNewPeerRunnable(this), 2500, 2500, TimeUnit.MILLISECONDS)
+        openCheckerExecutor.scheduleAtFixedRate(OpenCheckerRunnable(this, 350), 2500, 1, TimeUnit.MILLISECONDS)
+        scheduledExecutor.execute {
             showProgressBar(true)
             setupNewPeerGroup(networkParameters)
             peerGroup!!.startUp()
@@ -107,26 +96,19 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
         }
     }
 
-    private fun shutdownExistingPeer(shutdownCompleteCallback: OnShutdownCompleteCallback? = null, destroy: Boolean = false) {
+    private fun shutdownExistingPeer(shutdownCompleteCallback: OnShutdownCompleteCallback? = null) {
+        spinner.isEnabled = false
         getNewPeerFlag = false
         getAddresses?.cancel()
-        peerGroup?.closeConnections()
-        peerGroup?.shutDown()
         adapter_nodes.clear()
-        adapter_info.clear()
-        scheduledExecutor!!.execute {
-            scheduledExecutor?.shutdown()
-            openCheckerExecutor?.shutdown()
-            if (destroy) {
-                scheduledExecutor = null
-                openCheckerExecutor = null
-            }
-            peerGroup?.shutDown()
-            handler.postDelayed( {
-                getNewPeerFlag = true
-                shutdownCompleteCallback?.onShutdownComplete()
-            }, 2500)
-        }
+        connections.clear()
+        openConnections.clear()
+        peerGroup?.shutDown()
+        peerGroup = null
+        handler.postDelayed( {
+            getNewPeerFlag = true
+            shutdownCompleteCallback?.onShutdownComplete()
+        }, 2500)
     }
 
     /**
@@ -136,24 +118,23 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
      * Provide a NetworkParameters instance to create a new getNewPeerFlag
      */
     private fun setupNewPeerGroup(networkParameters: NetworkParameters) {
-        SelectedNetParams.instance = networkParameters
+        SelectedNetParams.instance = networkParameters;
         peerGroup = PeerGroup(SelectedNetParams.instance)
         peerGroup!!.addEventListener(object: AbstractPeerEventListener() {
-
             override fun onPeerConnected(peer: Peer) {
-                scheduledExecutor?.let {
+                scheduledExecutor.let {
                     peer.connectionOpenFuture.addListener(object: Runnable {
                         override fun run() {
                             getAddresses?.cancel()
                             getAddresses = GetAddressesRunnable(this@MainActivity, peer, peerGroup!!)
-                            scheduledExecutor?.schedule(getAddresses, 0, TimeUnit.MILLISECONDS)
+                            scheduledExecutor.schedule(getAddresses, 0, TimeUnit.MILLISECONDS)
                         }
                     }, it)
                 }
             }
 
             override fun onPeersDiscovered(peer: Peer, peerAddresses: List<PeerAddress>) {
-                scheduledExecutor?.execute {
+                scheduledExecutor.execute {
                     showProgressBar(true)
                     updateRecents(peerAddresses)
                     val filteredAddress = peerAddresses.filter { !contains(it, connections) }
@@ -171,7 +152,8 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
             }
 
             override fun onDnsDiscovery(addresses: Array<out InetSocketAddress>) {
-                scheduledExecutor?.execute {
+                handler.post{ spinner.isEnabled = true }
+                scheduledExecutor.execute {
                     if (addresses.isEmpty()) {
                         showMessage("dns discovery: failed")
                     } else {
@@ -186,13 +168,15 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
             }
 
             override fun onPeerDisconnected(peer: Peer) {
-                if (!peer.alreadyDisconnectedFlag) { peer.alreadyDisconnectedFlag = true } else { return }
-                getAddresses?.cancel()
-                peerGroup?.closeConnections()
-                showMessage("peer disconnected")
-                handler.postDelayed({
-                    this@MainActivity.getNewPeerFlag = true
-                } , 1000)
+                scheduledExecutor.let {
+                    if (!peer.alreadyDisconnectedFlag) { peer.alreadyDisconnectedFlag = true } else { return }
+                    getAddresses?.cancel()
+                    peerGroup?.closeConnections()
+                    showMessage("peer disconnected")
+                    handler.postDelayed({
+                        this@MainActivity.getNewPeerFlag = true
+                    } , 1000)
+                }
             }
         })
         peerGroup!!.addPeerDiscovery(DnsDiscovery(SelectedNetParams.instance))
@@ -212,7 +196,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
      * For the add custom address button
      */
     override fun onClick(v: View?) {
-        scheduledExecutor?.execute {
+        scheduledExecutor.execute {
             try {
                 if (edit.text.isNullOrEmpty()) {
                     throw NullPointerException()
@@ -240,6 +224,12 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
             when (position) {
                 0 -> {
                     init(DigiByteCoinDefition.get())
+                }
+                1 -> {
+                    init(BitcoinCoinDefition.get())
+                }
+                2 -> {
+                    init(VertCoinDefinition.get())
                 }
             }
         })
@@ -346,14 +336,13 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
         private val random = Random()
 
         override fun run() {
-            if (activity.connections.isEmpty()) {
-                return
-            }
-            val peerAddress = activity.connections.elementAt(random.nextInt(activity.connections.size - 1))
-            if (!peerAddress.open && NetUtils.checkServerListening(peerAddress.addr.hostAddress, 12024, speed) && !activity.contains(peerAddress, activity.openConnections)) {
-                activity.openConnections.add(peerAddress)
-                activity.updateCounts()
-                peerAddress.open = true
+            if (!activity.connections.isEmpty()) {
+                val peerAddress = activity.connections.random()
+                if (!peerAddress.open && NetUtils.checkServerListening(peerAddress.addr.hostAddress, SelectedNetParams.instance.port, speed) && !activity.contains(peerAddress, activity.openConnections)) {
+                    activity.openConnections.add(peerAddress)
+                    activity.updateCounts()
+                    peerAddress.open = true
+                }
             }
         }
     }
@@ -376,20 +365,19 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                 activity.showMessage("sending getAddr: #" + sendCount)
                 peer.getAddresses()
                 sendCount++
-                activity.scheduledExecutor?.schedule(this, 3000, TimeUnit.MILLISECONDS)
+                activity.scheduledExecutor.schedule(this, 3000, TimeUnit.MILLISECONDS)
             }
         }
     }
 
     private class RequestNewPeerRunnable(val activity: MainActivity): Runnable {
         override fun run() {
-            if (!activity.getNewPeerFlag || activity.openConnections.isEmpty()) {
-                return
+            if (activity.getNewPeerFlag && activity.openConnections.isNotEmpty()) {
+                val peerAddress = activity.openConnections.random()
+                activity.showMessage("requesting new peer")
+                activity.scheduledExecutor.schedule( { activity.peerGroup?.connectTo(peerAddress) }, 1000, TimeUnit.MILLISECONDS)
+                activity.getNewPeerFlag = false
             }
-            val peerAddress = activity.openConnections.elementAt(activity.random.nextInt(activity.openConnections.size - 1))
-            activity.showMessage("requesting new peer")
-            activity.scheduledExecutor?.schedule( { activity.peerGroup?.connectTo(peerAddress) }, 1000, TimeUnit.MILLISECONDS)
-            activity.getNewPeerFlag = false
         }
     }
 }

@@ -41,12 +41,8 @@ public class MainNetParams extends NetworkParameters {
         return definition.getAllowEmptyPeers();
     }
 
-    private static MainNetParams instance;
     public static synchronized MainNetParams get(Definition definition) {
-        if (instance == null) {
-            instance = new MainNetParams(definition);
-        }
-        return instance;
+        return new MainNetParams(definition);
     }
 
     @Override
