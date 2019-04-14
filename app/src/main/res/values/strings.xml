@@ -6,4 +6,12 @@
     <string name="bitcoin">Bitcoin</string>
     <string name="syscoin">Syscoin</string>
     <string name="vertcoin">Vertcoin</string>
+    <string name="rapids">Rapids</string>
+    <string name="doge">Doge</string>
+    <string name="zcash">Zcash</string>
+    <string name="dash">Dash</string>
+    <string name="bitcoingold">Bitcoin Gold</string>
+    <string name="bitcoincash">Bitcoin Cash</string>
+    <string name="bitcoindiamond">Bitcoin Diamond</string>
+    <string name="bitcoinsv">Bitcoin SV</string>
 </resources>

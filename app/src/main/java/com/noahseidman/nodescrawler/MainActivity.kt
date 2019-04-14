@@ -18,9 +18,7 @@ import com.google.common.io.ByteStreams
 import com.noahseidman.coinj.core.*
 import com.noahseidman.coinj.net.discovery.DnsDiscovery
 import com.noahseidman.nodescrawler.adapter.MultiTypeDataBoundAdapter
-import com.noahseidman.nodescrawler.coindefinitions.BitcoinCoinDefition
-import com.noahseidman.nodescrawler.coindefinitions.DigiByteCoinDefition
-import com.noahseidman.nodescrawler.coindefinitions.VertCoinDefinition
+import com.noahseidman.nodescrawler.coindefinitions.*
 import com.noahseidman.nodescrawler.interfaces.OnShutdownCompleteCallback
 import kotlinx.android.synthetic.main.activity_main.*
 import org.xembly.Directives
@@ -73,7 +71,10 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
         adapter_info = MultiTypeDataBoundAdapter(null, null)
         recycler_info.adapter = adapter_info
 
-        val coins = arrayOf(getString(R.string.digibyte), getString(R.string.bitcoin), getString(R.string.vertcoin))
+        val coins = arrayOf(getString(R.string.digibyte), getString(R.string.bitcoin), getString(R.string.vertcoin),
+            getString(R.string.rapids), getString(R.string.doge), getString(R.string.zcash), getString(R.string.dash),
+            getString(R.string.bitcoingold), getString(R.string.bitcoincash), getString(R.string.bitcoindiamond),
+            getString(R.string.bitcoinsv))
         val adapter = ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, coins)
         spinner.adapter = adapter
         spinner.onItemSelectedListener = this
@@ -230,6 +231,30 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                 }
                 2 -> {
                     init(VertCoinDefinition.get())
+                }
+                3 -> {
+                    init(RapidsCoinDefition.get())
+                }
+                4 -> {
+                    init(DogeCoinDefition.get())
+                }
+                5 -> {
+                    init(ZCashCoinDefition.get())
+                }
+                6 -> {
+                    init(DashCoinDefinition.get())
+                }
+                7 -> {
+                    init(BitcoinGoldCoinDefinition.get())
+                }
+                8 -> {
+                    init(BitcoinCashCoinDefinition.get())
+                }
+                9 -> {
+                    init(BitcoinDiamondCoinDefinition.get())
+                }
+                10 -> {
+                    init(BitcoinSVCoinDefinition.get())
                 }
             }
         })
