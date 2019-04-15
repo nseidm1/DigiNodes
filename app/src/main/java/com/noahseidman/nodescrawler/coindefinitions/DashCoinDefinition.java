@@ -47,6 +47,6 @@ public class DashCoinDefinition implements Definition {
 
     @Override
     public long getPacketMagic() {
-        return 0xbf0c6bd;
+        return 0xbf0c6bbd;
     }
 }
