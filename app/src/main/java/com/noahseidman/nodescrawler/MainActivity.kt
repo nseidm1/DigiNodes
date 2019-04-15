@@ -14,6 +14,7 @@ import androidx.appcompat.widget.ShareActionProvider
 import androidx.core.content.FileProvider
 import androidx.core.view.MenuItemCompat
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.common.collect.Sets
 import com.google.common.io.ByteStreams
 import com.noahseidman.coinj.core.*
 import com.noahseidman.coinj.net.discovery.DnsDiscovery
@@ -32,6 +33,7 @@ import java.net.InetSocketAddress
 import java.net.UnknownHostException
 import java.nio.charset.Charset
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
@@ -39,7 +41,7 @@ import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnItemSelectedListener {
 
-    private val nodes: HashSet<PeerAddress> = HashSet()
+    private val nodes: MutableSet<PeerAddress> = Sets.newSetFromMap(ConcurrentHashMap<PeerAddress, Boolean>());
     private val handler = Handler(Looper.getMainLooper())
     private lateinit var adapter_nodes: MultiTypeDataBoundAdapter
     private lateinit var adapter_info: MultiTypeDataBoundAdapter
@@ -381,7 +383,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
         calendar.timeInMillis = System.currentTimeMillis()
         calendar.add(Calendar.HOUR, -8)
         var count = 0
-        for (peerAddress in listOf(*nodes.toTypedArray())) {
+        for (peerAddress in nodes) {
             if (peerAddress.time.after(calendar.time)) {
                 count++
             }
