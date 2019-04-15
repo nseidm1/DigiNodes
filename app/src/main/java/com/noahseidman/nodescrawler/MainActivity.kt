@@ -14,6 +14,7 @@ import androidx.appcompat.widget.ShareActionProvider
 import androidx.core.content.FileProvider
 import androidx.core.view.MenuItemCompat
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.common.collect.Sets
 import com.google.common.io.ByteStreams
 import com.noahseidman.coinj.core.*
 import com.noahseidman.coinj.net.discovery.DnsDiscovery
@@ -32,6 +33,7 @@ import java.net.InetSocketAddress
 import java.net.UnknownHostException
 import java.nio.charset.Charset
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
@@ -39,7 +41,7 @@ import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnItemSelectedListener {
 
-    private val nodes: MutableSet<PeerAddress> = HashSet()
+    private val nodes: MutableSet<PeerAddress> = Sets.newSetFromMap(ConcurrentHashMap<PeerAddress, Boolean>());
     private val handler = Handler(Looper.getMainLooper())
     private lateinit var adapter_nodes: MultiTypeDataBoundAdapter
     private lateinit var adapter_info: MultiTypeDataBoundAdapter
@@ -87,7 +89,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
 
     private fun init(networkParameters: NetworkParameters) {
         scheduledExecutor.scheduleAtFixedRate(RequestNewPeerRunnable(this), 2500, 2500, TimeUnit.MILLISECONDS)
-        openCheckerExecutor.scheduleAtFixedRate(OpenCheckerRunnable(this, 5000), 2500, 1, TimeUnit.MILLISECONDS)
+        openCheckerExecutor.scheduleAtFixedRate(OpenCheckerRunnable(this, 1000), 2500, 1, TimeUnit.MILLISECONDS)
         scheduledExecutor.execute {
             showProgressBar(true)
             setupNewPeerGroup(networkParameters)
@@ -134,22 +136,12 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
             override fun onPeersDiscovered(peer: Peer, peerAddresses: List<PeerAddress>) {
                 scheduledExecutor.execute {
                     showProgressBar(true)
-                    var newAddress = 0
-                    peerAddresses.forEach {
-                        it.existing = nodes.contains(it)
-                        if (!it.existing) {
-                            newAddress++
-                            nodes.add(it)
-                        }
-                    }
-                    updateNodeTimestamps(peerAddresses)
-                    if (newAddress > 0) {
-                        showMessage("getAddr received: $newAddress")
-                        updateShareIntent()
-                        updateCounts(peerAddresses)
-                        getAddresses?.cancel()
-                        peerGroup!!.closeConnections()
-                    }
+                    getAddresses?.cancel()
+                    showMessage("getAddr received: processing")
+                    nodes.addAll(peerAddresses)
+                    updateShareIntent()
+                    updateCounts(peerAddresses)
+                    peerGroup!!.closeConnections()
                     showProgressBar(false)
                 }
             }
@@ -228,6 +220,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     }
 
     override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+        showMessage("starting selected coin")
         shutdownExistingPeer(OnShutdownCompleteCallback {
             when (position) {
                 0 -> {
@@ -366,21 +359,6 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
         handler.post { shareActionProvider?.setShareIntent(intent) }
     }
 
-    private fun updateNodeTimestamps(incomingAddresses: List<PeerAddress>) {
-        calendar.timeInMillis = System.currentTimeMillis()
-        calendar.add(Calendar.HOUR, -8)
-        var anyUpdates = false
-        incomingAddresses.forEach {
-            if (it.existing && it.time.after(calendar.time)) {
-                nodes.add(it)
-                anyUpdates = true
-            }
-        }
-        if (anyUpdates) {
-            updateCounts()
-        }
-    }
-
     private fun getRecentsCount(): Int {
         calendar.timeInMillis = System.currentTimeMillis()
         calendar.add(Calendar.HOUR, -8)
@@ -397,13 +375,19 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
         if (nodes.isEmpty()) {
             return null
         }
-        return nodes.random()
+        val openList = nodes.filter { it.open }
+        if (openList.isEmpty()) {
+            return null
+        } else {
+            return openList.random()
+
+        }
     }
 
     private fun getOpenCount(): Int {
         var openCount = 0
-        for (index in 0 until nodes.size) {
-            if (nodes.elementAt(index).open) {
+        for (node in nodes) {
+            if (node.open) {
                 openCount++
             }
         }
