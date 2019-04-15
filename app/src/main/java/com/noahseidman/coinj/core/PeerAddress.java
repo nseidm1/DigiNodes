@@ -16,7 +16,9 @@
 
 package com.noahseidman.coinj.core;
 
+import com.noahseidman.nodescrawler.R;
 import com.noahseidman.nodescrawler.SelectedNetParams;
+import com.noahseidman.nodescrawler.adapter.LayoutBinding;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -35,7 +37,7 @@ import static com.noahseidman.coinj.core.Utils.uint64ToByteStreamLE;
  * A PeerAddress holds an IP address and port number representing the network location of
  * a peer in the Peercoin P2P network. It exists primarily for serialization purposes.
  */
-public class PeerAddress extends ChildMessage implements Comparable {
+public class PeerAddress extends ChildMessage implements Comparable, LayoutBinding {
     private static final long serialVersionUID = 7501293709324197411L;
     static final int MESSAGE_SIZE = 30;
     private static final Calendar calendar = Calendar.getInstance();
@@ -45,6 +47,13 @@ public class PeerAddress extends ChildMessage implements Comparable {
     private BigInteger services;
     private Date time;
     public boolean open;
+    public boolean existing;
+
+
+    @Override
+    public int getLayoutId() {
+        return R.layout.peer_view;
+    }
 
     /**
      * Construct a peer address from a serialized payload.
@@ -247,7 +256,7 @@ public class PeerAddress extends ChildMessage implements Comparable {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         PeerAddress other = (PeerAddress) o;
-        return other.addr.getHostAddress().equals(addr.getHostAddress()) &&
+        return other.addr.getHostName().equals(addr.getHostName()) &&
                 other.port == port;
     }
 

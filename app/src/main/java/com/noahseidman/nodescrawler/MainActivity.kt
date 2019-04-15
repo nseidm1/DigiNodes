@@ -35,13 +35,11 @@ import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
-import kotlin.collections.HashSet
 
 
 class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnItemSelectedListener {
 
-    private val connections: HashSet<PeerAddress> = HashSet()
-    private val openConnections: HashSet<PeerAddress> = HashSet()
+    private val nodes: HashSet<PeerAddress> = HashSet()
     private val handler = Handler(Looper.getMainLooper())
     private lateinit var adapter_nodes: MultiTypeDataBoundAdapter
     private lateinit var adapter_info: MultiTypeDataBoundAdapter
@@ -87,7 +85,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
 
     private fun init(networkParameters: NetworkParameters) {
         scheduledExecutor.scheduleAtFixedRate(RequestNewPeerRunnable(this), 2500, 2500, TimeUnit.MILLISECONDS)
-        openCheckerExecutor.scheduleAtFixedRate(OpenCheckerRunnable(this, 350), 2500, 1, TimeUnit.MILLISECONDS)
+        openCheckerExecutor.scheduleAtFixedRate(OpenCheckerRunnable(this, 1000), 2500, 1, TimeUnit.MILLISECONDS)
         scheduledExecutor.execute {
             showProgressBar(true)
             setupNewPeerGroup(networkParameters)
@@ -102,8 +100,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
         getNewPeerFlag = false
         getAddresses?.cancel()
         adapter_nodes.clear()
-        connections.clear()
-        openConnections.clear()
+        nodes.clear()
         peerGroup?.shutDown()
         peerGroup = null
         handler.postDelayed( {
@@ -124,12 +121,10 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
         peerGroup!!.addEventListener(object: AbstractPeerEventListener() {
             override fun onPeerConnected(peer: Peer) {
                 scheduledExecutor.let {
-                    peer.connectionOpenFuture.addListener(object: Runnable {
-                        override fun run() {
-                            getAddresses?.cancel()
-                            getAddresses = GetAddressesRunnable(this@MainActivity, peer, peerGroup!!)
-                            scheduledExecutor.schedule(getAddresses, 0, TimeUnit.MILLISECONDS)
-                        }
+                    peer.connectionOpenFuture.addListener(Runnable {
+                        getAddresses?.cancel()
+                        getAddresses = GetAddressesRunnable(this@MainActivity, peer, peerGroup!!)
+                        scheduledExecutor.schedule(getAddresses, 0, TimeUnit.MILLISECONDS)
                     }, it)
                 }
             }
@@ -137,14 +132,19 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
             override fun onPeersDiscovered(peer: Peer, peerAddresses: List<PeerAddress>) {
                 scheduledExecutor.execute {
                     showProgressBar(true)
+                    var newAddress = 0
+                    peerAddresses.forEach {
+                        it.existing = nodes.contains(it)
+                        if (!it.existing) {
+                            newAddress++
+                            nodes.add(it)
+                        }
+                    }
                     updateRecents(peerAddresses)
-                    val filteredAddress = peerAddresses.filter { !contains(it, connections) }
-                    if (filteredAddress.isNotEmpty()) {
-                        showMessage("getAddr received: " + filteredAddress.size)
-                        val viewModels: List<PeerModel> = filteredAddress.map { PeerModel(it.addr.hostAddress, it.port) }
-                        connections.addAll(filteredAddress)
+                    if (newAddress > 0) {
+                        showMessage("getAddr received: $newAddress")
                         updateShareIntent()
-                        updateCounts(viewModels)
+                        updateCounts(peerAddresses)
                         getAddresses?.cancel()
                         peerGroup!!.closeConnections()
                     }
@@ -160,9 +160,8 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                     } else {
                         showMessage("dns discovery: success")
                         val peerAddresses = addresses.map { PeerAddress(it.address, it.port) }
-                        val viewModels: List<PeerModel> = peerAddresses.map { PeerModel(it.addr.hostAddress, it.port) }
-                        connections.addAll(peerAddresses)
-                        updateCounts(viewModels)
+                        nodes.addAll(peerAddresses)
+                        updateCounts(peerAddresses)
                         updateShareIntent()
                     }
                 }
@@ -204,12 +203,12 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                 }
                 val address = InetAddress.getByName(edit.text.toString())
                 val peerAddress = PeerAddress(address)
-                connections.add(peerAddress)
+                nodes.add(peerAddress)
                 updateCounts(null)
                 handler.post {
                     handler.post { showMessage("Manual Node Added") }
-                    adapter_nodes.addItem( PeerModel(peerAddress.addr.hostAddress, peerAddress.port))
-                    (recycler_nodes.layoutManager as LinearLayoutManager).smoothScrollToPosition(recycler_nodes, null, connections.size)
+                    adapter_nodes.addItem(peerAddress)
+                    scrollToBottom()
                     edit.text.clear()
                 }
             } catch(e: UnknownHostException) {
@@ -268,7 +267,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                 14 -> {
                     init(KomodoDefinition.get())
                 }
-                14 -> {
+                15 -> {
                     init(StratisDefinition.get())
                 }
             }
@@ -290,13 +289,27 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     /////Update UI methods
     //////////////////////
 
-    private fun updateCounts(viewModels: List<PeerModel>? = null) {
+    private fun updateCounts(viewModels: List<PeerAddress>? = null) {
         handler.post {
-            count.text = String.format(getString(R.string.nodes), connections.size, openConnections.size, getRecentsCount())
-            viewModels?.let {
-                adapter_nodes.addItems(viewModels)
-                (recycler_nodes.layoutManager as LinearLayoutManager).smoothScrollToPosition(recycler_nodes, null, connections.size)
+            count.text = String.format(getString(R.string.nodes), nodes.size, getOpenCount(), getRecentsCount())
+            viewModels?.let { vm ->
+                var hasNewAddress = false
+                vm.forEach {
+                    if (!it.existing) {
+                        adapter_nodes.addItem(it)
+                        hasNewAddress = true
+                    }
+                }
+                if (hasNewAddress) {
+                    scrollToBottom()
+                }
             }
+        }
+    }
+
+    private fun scrollToBottom() {
+        if ((recycler_nodes.layoutManager as LinearLayoutManager).findLastCompletelyVisibleItemPosition() == nodes.size) {
+            (recycler_nodes.layoutManager as LinearLayoutManager).smoothScrollToPosition(recycler_nodes, null, nodes.size)
         }
     }
 
@@ -311,7 +324,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     @Suppress("UnstableApiUsage")
     private fun updateShareIntent() {
         val directives = Directives().add("Nodes");
-        for (peerAddress in connections) {
+        for (peerAddress in nodes) {
             directives.add("Node").set(peerAddress.addr.hostAddress).up();
         }
         val directory = File(filesDir, "nodes")
@@ -336,22 +349,17 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
         handler.post { shareActionProvider?.setShareIntent(intent) }
     }
 
-
-    private fun contains(check: PeerAddress, collection: Set<PeerAddress>): Boolean {
-        for (peerAddress in collection) {
-            if (peerAddress.equals(check)) {
-                return true
-            }
-        }
-        return false
-    }
-
     private fun updateRecents(rawAddresses: List<PeerAddress>) {
         calendar.timeInMillis = System.currentTimeMillis()
         calendar.add(Calendar.HOUR, -8)
-        val recentAddresses = rawAddresses.filter { it.time.after(calendar.time) && contains(it, connections) }
-        if (recentAddresses.isNotEmpty()) {
-            connections.addAll(recentAddresses)
+        var anyUpdates = false
+        rawAddresses.forEach {
+            if (it.existing && it.time.after(calendar.time)) {
+                nodes.add(it)
+                anyUpdates = true
+            }
+        }
+        if (anyUpdates) {
             updateCounts()
         }
     }
@@ -360,7 +368,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
         calendar.timeInMillis = System.currentTimeMillis()
         calendar.add(Calendar.HOUR, -8)
         var count = 0
-        for (peerAddress in connections) {
+        for (peerAddress in nodes) {
             if (peerAddress.time.after(calendar.time)) {
                 count++
             }
@@ -368,18 +376,38 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
         return count
     }
 
+    private fun getNewOpenPeer(): PeerAddress? {
+        if (nodes.isEmpty()) {
+            return null
+        }
+        val openList = listOf(*nodes.toTypedArray()).filter { it.open }
+        if (openList.isEmpty()) {
+            return null
+        } else {
+            return openList.random()
+
+        }
+    }
+
+    private fun getOpenCount(): Int {
+        var openCount = 0
+        nodes.forEach {
+            if (it.open) {
+                openCount++
+            }
+        }
+        return openCount
+    }
+
     ////////////////////
     /////Runnables
     ////////////////////
 
     private class OpenCheckerRunnable(val activity: MainActivity, val speed: Int): Runnable {
-        private val random = Random()
-
         override fun run() {
-            if (!activity.connections.isEmpty()) {
-                val peerAddress = activity.connections.random()
-                if (!peerAddress.open && NetUtils.checkServerListening(peerAddress.addr.hostAddress, SelectedNetParams.instance.port, speed) && !activity.contains(peerAddress, activity.openConnections)) {
-                    activity.openConnections.add(peerAddress)
+            if (!activity.nodes.isEmpty()) {
+                val peerAddress = activity.nodes.random()
+                if (!peerAddress.open && NetUtils.checkServerListening(peerAddress.addr.hostAddress, SelectedNetParams.instance.port, speed)) {
                     activity.updateCounts()
                     peerAddress.open = true
                 }
@@ -390,21 +418,21 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     private class GetAddressesRunnable(val activity: MainActivity, val peer: Peer, val peerGroup: PeerGroup): Runnable {
 
         private var canceled = false
-        private var sendCount = 0
+        private var sendGetAddrCount = 0
 
         fun cancel() {
             canceled = true
         }
 
         override fun run() {
-            if (sendCount > 20) {
+            if (sendGetAddrCount > 20) {
                 peerGroup.closeConnections()
                 return
             }
             if (!canceled) {
-                activity.showMessage("sending getAddr: #" + sendCount)
+                activity.showMessage("sending getAddr: #" + sendGetAddrCount)
                 peer.getAddresses()
-                sendCount++
+                sendGetAddrCount++
                 activity.scheduledExecutor.schedule(this, 3000, TimeUnit.MILLISECONDS)
             }
         }
@@ -412,10 +440,13 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
 
     private class RequestNewPeerRunnable(val activity: MainActivity): Runnable {
         override fun run() {
-            if (activity.getNewPeerFlag && activity.openConnections.isNotEmpty()) {
-                val peerAddress = activity.openConnections.random()
+            if (!activity.getNewPeerFlag) {
+                return
+            }
+            val openNode = activity.getNewOpenPeer()
+            openNode?.let {
                 activity.showMessage("requesting new peer")
-                activity.scheduledExecutor.schedule( { activity.peerGroup?.connectTo(peerAddress) }, 1000, TimeUnit.MILLISECONDS)
+                activity.scheduledExecutor.schedule( { activity.peerGroup?.connectTo(it) }, 1000, TimeUnit.MILLISECONDS)
                 activity.getNewPeerFlag = false
             }
         }

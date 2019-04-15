@@ -33,7 +33,7 @@ public class RapidsCoinDefition implements Definition {
 
     @Override
     public int getPort() {
-        return 19333;
+        return 28732;
     }
 
     @Override
@@ -48,6 +48,6 @@ public class RapidsCoinDefition implements Definition {
 
     @Override
     public long getPacketMagic() {
-        return 0x61a2f5b;
+        return 0x61a2f5cb;
     }
 }
