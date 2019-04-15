@@ -41,7 +41,6 @@ public class PeerAddress extends ChildMessage implements Comparable, LayoutBindi
     static final int MESSAGE_SIZE = 30;
 
     private InetAddress addr;
-    private String address;
     private int port;
     private BigInteger services;
     private Date time;
@@ -87,7 +86,6 @@ public class PeerAddress extends ChildMessage implements Comparable, LayoutBindi
      */
     public PeerAddress(InetAddress addr, int port, int protocolVersion) {
         this.addr = checkNotNull(addr);
-        this.address = this.addr.getHostAddress();
         this.port = port;
         this.protocolVersion = protocolVersion;
         this.services = BigInteger.ZERO;
@@ -159,7 +157,6 @@ public class PeerAddress extends ChildMessage implements Comparable, LayoutBindi
         byte[] addrBytes = readBytes(16);
         try {
             addr = InetAddress.getByAddress(addrBytes);
-            address = addr.getHostAddress();
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);  // Cannot happen.
         }
@@ -183,11 +180,6 @@ public class PeerAddress extends ChildMessage implements Comparable, LayoutBindi
         maybeParse();
         return addr;
     }
-
-    public String getAddress() {
-        return address;
-    }
-
 
     /**
      * @param addr the addr to set
@@ -261,7 +253,7 @@ public class PeerAddress extends ChildMessage implements Comparable, LayoutBindi
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         PeerAddress other = (PeerAddress) o;
-        return other.addr.getHostName().equals(addr.getHostName()) &&
+        return other.addr.getHostAddress().equals(addr.getHostAddress()) &&
                 other.port == port;
     }
 
