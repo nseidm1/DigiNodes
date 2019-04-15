@@ -381,7 +381,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
         calendar.timeInMillis = System.currentTimeMillis()
         calendar.add(Calendar.HOUR, -8)
         var count = 0
-        for (peerAddress in nodes) {
+        for (peerAddress in listOf(*nodes.toTypedArray())) {
             if (peerAddress.time.after(calendar.time)) {
                 count++
             }
