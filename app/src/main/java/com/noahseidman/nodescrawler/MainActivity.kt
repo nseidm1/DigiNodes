@@ -174,7 +174,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                     if (!peer.alreadyDisconnectedFlag) { peer.alreadyDisconnectedFlag = true } else { return }
                     getAddresses?.cancel()
                     peerGroup?.closeConnections()
-                    showMessage("peer disconnected")
+                    showMessage("node disconnected")
                     handler.postDelayed({
                         this@MainActivity.getNewPeerFlag = true
                     } , 1000)
@@ -456,7 +456,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
             }
             val openNode = activity.getNewOpenPeer()
             openNode?.let {
-                activity.showMessage("requesting new peer")
+                activity.showMessage("requesting new node")
                 activity.scheduledExecutor.schedule( { activity.peerGroup?.connectTo(it) }, 1000, TimeUnit.MILLISECONDS)
                 activity.getNewPeerFlag = false
             }
