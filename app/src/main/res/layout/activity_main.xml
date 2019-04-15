@@ -13,6 +13,7 @@
         <ProgressBar android:id="@+id/progress" android:layout_width="wrap_content" android:layout_height="wrap_content"
                      android:layout_gravity="end"/>
     </androidx.appcompat.widget.Toolbar>
+    <ProgressBar android:id="@+id/processing" android:layout_width="match_parent" android:layout_height="2dp" style="?android:attr/progressBarStyleHorizontal"/>
 
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
                   android:orientation="horizontal" android:focusableInTouchMode="true">

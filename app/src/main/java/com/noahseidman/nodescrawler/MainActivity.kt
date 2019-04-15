@@ -14,7 +14,6 @@ import androidx.appcompat.widget.ShareActionProvider
 import androidx.core.content.FileProvider
 import androidx.core.view.MenuItemCompat
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.google.common.collect.Sets
 import com.google.common.io.ByteStreams
 import com.noahseidman.coinj.core.*
 import com.noahseidman.coinj.net.discovery.DnsDiscovery
@@ -33,7 +32,6 @@ import java.net.InetSocketAddress
 import java.net.UnknownHostException
 import java.nio.charset.Charset
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
@@ -41,7 +39,7 @@ import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnItemSelectedListener {
 
-    private val nodes: MutableSet<PeerAddress> = Sets.newSetFromMap(ConcurrentHashMap<PeerAddress, Boolean>());
+    private val nodes: LinkedHashSet<PeerAddress> = LinkedHashSet()
     private val handler = Handler(Looper.getMainLooper())
     private lateinit var adapter_nodes: MultiTypeDataBoundAdapter
     private lateinit var adapter_info: MultiTypeDataBoundAdapter
@@ -51,8 +49,9 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     private var shareActionProvider: ShareActionProvider? = null
     private var getAddresses: GetAddressesRunnable? = null
     private val calendar = Calendar.getInstance()
-
     private var getNewPeerFlag = true
+    private var openCount = 0
+    private var recentsCount = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -138,9 +137,25 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                     showProgressBar(true)
                     getAddresses?.cancel()
                     showMessage("getAddr received: processing")
-                    nodes.addAll(peerAddresses)
+                    processing.progress = 0
+                    processing.max = peerAddresses.size
+                    var addCount = 0
+                    peerAddresses.forEach {
+                        if (nodes.add(it)) {
+                            addNodes(it)
+                            updateCounts()
+                            addCount++
+                        }
+                        processing.progress++
+                    }
+                    if (addCount > 0) {
+                        showMessage("${addCount} new nodes added")
+                    } else {
+                        showMessage("no new nodes found")
+                    }
+                    updateRecentsCount()
+                    updateCounts()
                     updateShareIntent()
-                    updateCounts(peerAddresses)
                     peerGroup!!.closeConnections()
                     showProgressBar(false)
                 }
@@ -155,7 +170,13 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                         showMessage("dns discovery: success")
                         val peerAddresses = addresses.map { PeerAddress(it.address, it.port) }
                         nodes.addAll(peerAddresses)
-                        updateCounts(peerAddresses)
+                        peerAddresses.forEach {
+                            addNodes(it)
+                        }
+                        openCount = 0
+                        recentsCount = 0
+                        updateRecentsCount()
+                        updateCounts()
                         updateShareIntent()
                     }
                 }
@@ -183,10 +204,8 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     private fun showProgressBar(show: Boolean) {
         handler.post {
             if (show) {
-                spinner.isEnabled = false
                 progress.visibility = View.VISIBLE
             } else {
-                spinner.isEnabled = true
                 progress.visibility = View.GONE
             }
         }
@@ -204,7 +223,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                 val address = InetAddress.getByName(edit.text.toString())
                 val peerAddress = PeerAddress(address)
                 nodes.add(peerAddress)
-                updateCounts(null)
+                updateCounts()
                 handler.post {
                     handler.post { showMessage("Manual Node Added") }
                     adapter_nodes.addItem(peerAddress)
@@ -299,28 +318,23 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     /////Update UI methods
     //////////////////////
 
-    private fun updateCounts(viewModels: List<PeerAddress>? = null) {
+    private fun addNodes(peerAddress: PeerAddress) {
         handler.post {
-            count.text = String.format(getString(R.string.nodes), nodes.size, getOpenCount(), getRecentsCount())
-            viewModels?.let { vm ->
-                var hasNewAddress = false
-                vm.forEach {
-                    if (!it.existing) {
-                        adapter_nodes.addItem(it)
-                        hasNewAddress = true
-                    }
-                }
-                if (hasNewAddress) {
-                    scrollToBottom()
-                }
+            adapter_nodes.addItem(peerAddress)
+            handler.post {
+                scrollToBottom()
             }
         }
     }
 
-    private fun scrollToBottom() {
-        if ((recycler_nodes.layoutManager as LinearLayoutManager).findLastCompletelyVisibleItemPosition() == nodes.size) {
-            (recycler_nodes.layoutManager as LinearLayoutManager).smoothScrollToPosition(recycler_nodes, null, nodes.size)
+    private fun updateCounts() {
+        handler.post {
+            count.text = String.format(getString(R.string.nodes), nodes.size, openCount, recentsCount)
         }
+    }
+
+    private fun scrollToBottom() {
+        (recycler_nodes.layoutManager as LinearLayoutManager).smoothScrollToPosition(recycler_nodes, null, nodes.size)
     }
 
     private fun showMessage(message: String) {
@@ -359,7 +373,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
         handler.post { shareActionProvider?.setShareIntent(intent) }
     }
 
-    private fun getRecentsCount(): Int {
+    private fun updateRecentsCount() {
         calendar.timeInMillis = System.currentTimeMillis()
         calendar.add(Calendar.HOUR, -8)
         var count = 0
@@ -368,7 +382,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                 count++
             }
         }
-        return count
+        this.recentsCount = count
     }
 
     private fun getNewOpenPeer(): PeerAddress? {
@@ -384,16 +398,6 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
         }
     }
 
-    private fun getOpenCount(): Int {
-        var openCount = 0
-        for (node in nodes) {
-            if (node.open) {
-                openCount++
-            }
-        }
-        return openCount
-    }
-
     ////////////////////
     /////Runnables
     ////////////////////
@@ -405,6 +409,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                 if (!peerAddress.open && NetUtils.checkServerListening(peerAddress.addr.hostAddress, SelectedNetParams.instance.port, speed)) {
                     activity.updateCounts()
                     peerAddress.open = true
+                    activity.openCount++
                 }
             }
         }

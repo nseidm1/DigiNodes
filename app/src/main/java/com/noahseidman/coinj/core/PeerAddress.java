@@ -26,7 +26,6 @@ import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
-import java.util.Calendar;
 import java.util.Date;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -40,7 +39,6 @@ import static com.noahseidman.coinj.core.Utils.uint64ToByteStreamLE;
 public class PeerAddress extends ChildMessage implements Comparable, LayoutBinding {
     private static final long serialVersionUID = 7501293709324197411L;
     static final int MESSAGE_SIZE = 30;
-    private static final Calendar calendar = Calendar.getInstance();
 
     private InetAddress addr;
     private String address;
@@ -89,6 +87,7 @@ public class PeerAddress extends ChildMessage implements Comparable, LayoutBindi
      */
     public PeerAddress(InetAddress addr, int port, int protocolVersion) {
         this.addr = checkNotNull(addr);
+        this.address = this.addr.getHostAddress();
         this.port = port;
         this.protocolVersion = protocolVersion;
         this.services = BigInteger.ZERO;
@@ -185,6 +184,10 @@ public class PeerAddress extends ChildMessage implements Comparable, LayoutBindi
         return addr;
     }
 
+    public String getAddress() {
+        return address;
+    }
+
 
     /**
      * @param addr the addr to set
@@ -258,7 +261,8 @@ public class PeerAddress extends ChildMessage implements Comparable, LayoutBindi
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         PeerAddress other = (PeerAddress) o;
-        return other.address.equals(address);
+        return other.addr.getHostName().equals(addr.getHostName()) &&
+                other.port == port;
     }
 
     @Override
