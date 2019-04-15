@@ -72,7 +72,9 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
         val coins = arrayOf(getString(R.string.digibyte), getString(R.string.bitcoin), getString(R.string.vertcoin),
             getString(R.string.rapids), getString(R.string.doge), getString(R.string.zcash), getString(R.string.dash),
             getString(R.string.bitcoingold), getString(R.string.bitcoincash), getString(R.string.bitcoindiamond),
-            getString(R.string.bitcoinsv), getString(R.string.litecoin), getString(R.string.block), getString(R.string.zcoin), getString(R.string.komodo), getString(R.string.stratis))
+            getString(R.string.bitcoinsv), getString(R.string.litecoin), getString(R.string.block),
+            getString(R.string.zcoin), getString(R.string.komodo), getString(R.string.stratis),
+            getString(R.string.pivx), getString(R.string.mue), getString(R.string.phore))
         val adapter = ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, coins)
         spinner.adapter = adapter
         spinner.onItemSelectedListener = this
@@ -269,6 +271,15 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                 }
                 15 -> {
                     init(StratisDefinition.get())
+                }
+                16 -> {
+                    init(PivxCoinDefinition.get())
+                }
+                17 -> {
+                    init(MueCoinDefinition.get())
+                }
+                18 -> {
+                    init(PhoreCoinDefinition.get())
                 }
             }
         })

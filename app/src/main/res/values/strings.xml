@@ -20,4 +20,7 @@
     <string name="zcoin">Zcoin</string>
     <string name="komodo">Komodo</string>
     <string name="stratis">Stratis</string>
+    <string name="pivx">Pivx</string>
+    <string name="mue">MUE</string>
+    <string name="phore">Phore</string>
 </resources>
