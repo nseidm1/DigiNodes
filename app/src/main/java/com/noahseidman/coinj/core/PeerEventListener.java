@@ -95,4 +95,6 @@ public interface PeerEventListener {
 
     public void onAnyMessage(Peer peer);
 
+    public void timeoutOccured();
+
 }

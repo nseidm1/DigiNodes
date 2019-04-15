@@ -277,19 +277,4 @@ public class PeerAddress extends ChildMessage implements Comparable, LayoutBindi
             return 1;
         }
     }
-
-    private class ReusableInetSocketAddres extends InetSocketAddress {
-
-        public ReusableInetSocketAddres(int port) {
-            super(port);
-        }
-
-        public ReusableInetSocketAddres(InetAddress addr, int port) {
-            super(addr, port);
-        }
-
-        public ReusableInetSocketAddres(String hostname, int port) {
-            super(hostname, port);
-        }
-    }
 }

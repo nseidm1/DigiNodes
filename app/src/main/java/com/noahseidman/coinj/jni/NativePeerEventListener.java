@@ -64,4 +64,9 @@ public class NativePeerEventListener implements PeerEventListener {
     public void onAnyMessage(Peer peer) {
 
     }
+
+    @Override
+    public void timeoutOccured() {
+
+    }
 }

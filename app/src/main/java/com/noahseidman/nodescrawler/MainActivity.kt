@@ -14,7 +14,6 @@ import androidx.appcompat.widget.ShareActionProvider
 import androidx.core.content.FileProvider
 import androidx.core.view.MenuItemCompat
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.google.common.collect.Sets
 import com.google.common.io.ByteStreams
 import com.noahseidman.coinj.core.*
 import com.noahseidman.coinj.net.discovery.DnsDiscovery
@@ -33,7 +32,6 @@ import java.net.InetSocketAddress
 import java.net.UnknownHostException
 import java.nio.charset.Charset
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
@@ -41,7 +39,7 @@ import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnItemSelectedListener {
 
-    private val nodes: MutableSet<PeerAddress> = Sets.newSetFromMap(ConcurrentHashMap<PeerAddress, Boolean>());
+    private val nodes: MutableSet<PeerAddress> = HashSet()
     private val handler = Handler(Looper.getMainLooper())
     private lateinit var adapter_nodes: MultiTypeDataBoundAdapter
     private lateinit var adapter_info: MultiTypeDataBoundAdapter
@@ -89,7 +87,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
 
     private fun init(networkParameters: NetworkParameters) {
         scheduledExecutor.scheduleAtFixedRate(RequestNewPeerRunnable(this), 2500, 2500, TimeUnit.MILLISECONDS)
-        openCheckerExecutor.scheduleAtFixedRate(OpenCheckerRunnable(this, 1000), 2500, 1, TimeUnit.MILLISECONDS)
+        openCheckerExecutor.scheduleAtFixedRate(OpenCheckerRunnable(this, 5000), 2500, 1, TimeUnit.MILLISECONDS)
         scheduledExecutor.execute {
             showProgressBar(true)
             setupNewPeerGroup(networkParameters)
@@ -144,7 +142,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                             nodes.add(it)
                         }
                     }
-                    updateRecents(peerAddresses)
+                    updateNodeTimestamps(peerAddresses)
                     if (newAddress > 0) {
                         showMessage("getAddr received: $newAddress")
                         updateShareIntent()
@@ -181,6 +179,10 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                         this@MainActivity.getNewPeerFlag = true
                     } , 1000)
                 }
+            }
+
+            override fun timeoutOccured() {
+                showMessage("timeout connecting")
             }
         })
         peerGroup!!.addPeerDiscovery(DnsDiscovery(SelectedNetParams.instance))
@@ -364,11 +366,11 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
         handler.post { shareActionProvider?.setShareIntent(intent) }
     }
 
-    private fun updateRecents(rawAddresses: List<PeerAddress>) {
+    private fun updateNodeTimestamps(incomingAddresses: List<PeerAddress>) {
         calendar.timeInMillis = System.currentTimeMillis()
         calendar.add(Calendar.HOUR, -8)
         var anyUpdates = false
-        rawAddresses.forEach {
+        incomingAddresses.forEach {
             if (it.existing && it.time.after(calendar.time)) {
                 nodes.add(it)
                 anyUpdates = true
@@ -395,19 +397,13 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
         if (nodes.isEmpty()) {
             return null
         }
-        val openList = listOf(*nodes.toTypedArray()).filter { it.open }
-        if (openList.isEmpty()) {
-            return null
-        } else {
-            return openList.random()
-
-        }
+        return nodes.random()
     }
 
     private fun getOpenCount(): Int {
         var openCount = 0
-        nodes.forEach {
-            if (it.open) {
+        for (index in 0 until nodes.size) {
+            if (nodes.elementAt(index).open) {
                 openCount++
             }
         }

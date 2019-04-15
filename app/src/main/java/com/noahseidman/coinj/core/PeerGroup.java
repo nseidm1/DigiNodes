@@ -45,7 +45,7 @@ public class PeerGroup {
     private MemoryPool pool = new MemoryPool();
     private Executor executor = Executors.newSingleThreadExecutor();
 
-    public static final int DEFAULT_CONNECT_TIMEOUT_MILLIS = 10000;
+    public static final int DEFAULT_CONNECT_TIMEOUT_MILLIS = 20000;
 
     public PeerGroup(NetworkParameters params) {
         this.params = checkNotNull(params);

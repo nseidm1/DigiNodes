@@ -68,4 +68,9 @@ public class AbstractPeerEventListener implements PeerEventListener {
     public void onAnyMessage(Peer peer) {
 
     }
+
+    @Override
+    public void timeoutOccured() {
+
+    }
 }

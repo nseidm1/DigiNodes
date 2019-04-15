@@ -187,7 +187,9 @@ public class PeercoinSerializer {
         try {
             return makeMessage(header.command, header.size, payloadBytes, hash, header.checksum);
         } catch (Exception e) {
-            throw new ProtocolException("Error deserializing message " + HEX.encode(payloadBytes) + "\n", e);
+            log.debug("Unknown message content");
+            return new UnknownMessage(params, header.command, payloadBytes);
+            //throw new ProtocolException("Error deserializing message " + HEX.encode(payloadBytes) + "\n", e);
         }
     }
 

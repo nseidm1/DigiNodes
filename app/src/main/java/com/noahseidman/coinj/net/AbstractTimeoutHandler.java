@@ -27,7 +27,7 @@ import java.util.TimerTask;
 public abstract class AbstractTimeoutHandler {
     // TimerTask and timeout value which are added to a timer to kill the connection on timeout
     private TimerTask timeoutTask;
-    private long timeoutMillis = 0;
+    private long timeoutMillis = 20000;
     private boolean timeoutEnabled = true;
 
     // A timer which manages expiring channels as their timeouts occur (if configured).

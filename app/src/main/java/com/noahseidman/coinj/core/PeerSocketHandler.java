@@ -118,6 +118,7 @@ public abstract class PeerSocketHandler extends AbstractTimeoutHandler implement
     @Override
     protected void timeoutOccurred() {
         log.info("{}: Timed out", getAddress());
+
         close();
     }
 

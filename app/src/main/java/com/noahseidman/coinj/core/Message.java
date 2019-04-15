@@ -74,6 +74,13 @@ public abstract class Message implements Serializable {
         parseRetain = false;
     }
 
+    public Message(String command) {
+        parsed = true;
+        parseLazy = false;
+        parseRetain = false;
+
+    }
+
     Message(NetworkParameters params) {
         this.params = params;
         parsed = true;

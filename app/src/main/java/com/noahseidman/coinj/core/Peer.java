@@ -1569,4 +1569,12 @@ public class Peer extends PeerSocketHandler {
             registration.executor.execute(() -> registration.listener.onAnyMessage(this));
         }
     }
+
+    @Override
+    protected void timeoutOccurred() {
+        super.timeoutOccurred();
+        for (final ListenerRegistration<PeerEventListener> registration : eventListeners) {
+            registration.executor.execute(() -> registration.listener.timeoutOccured());
+        }
+    }
 }
