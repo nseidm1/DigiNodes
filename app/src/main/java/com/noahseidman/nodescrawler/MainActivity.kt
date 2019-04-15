@@ -187,8 +187,10 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     private fun showProgressBar(show: Boolean) {
         handler.post {
             if (show) {
+                spinner.isEnabled = false
                 progress.visibility = View.VISIBLE
             } else {
+                spinner.isEnabled = true
                 progress.visibility = View.GONE
             }
         }
