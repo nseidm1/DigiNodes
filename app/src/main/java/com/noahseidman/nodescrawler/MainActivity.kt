@@ -21,8 +21,7 @@ import com.noahseidman.nodescrawler.adapter.MultiTypeDataBoundAdapter
 import com.noahseidman.nodescrawler.coindefinitions.*
 import com.noahseidman.nodescrawler.interfaces.OnShutdownCompleteCallback
 import kotlinx.android.synthetic.main.activity_main.*
-import org.xembly.Directives
-import org.xembly.Xembler
+import org.json.JSONArray
 import org.zeroturnaround.zip.ZipUtil
 import java.io.ByteArrayInputStream
 import java.io.File
@@ -30,7 +29,6 @@ import java.io.FileOutputStream
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.UnknownHostException
-import java.nio.charset.Charset
 import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -139,23 +137,24 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                     showMessage("getAddr received: processing")
                     processing.progress = 0
                     processing.max = peerAddresses.size
-                    var addCount = 0
+                    val newNodes: LinkedList<PeerAddress> = LinkedList()
                     peerAddresses.forEach {
                         if (nodes.add(it)) {
+                            newNodes.add(it)
                             addNodes(it)
                             updateCounts()
-                            addCount++
                         }
                         processing.progress++
                     }
-                    if (addCount > 0) {
-                        showMessage("${addCount} new nodes added")
+                    if (newNodes.size > 0) {
+                        showMessage("${newNodes.size} new nodes added")
                     } else {
                         showMessage("no new nodes found")
                     }
                     updateRecentsCount()
                     updateCounts()
-                    updateShareIntent()
+                    val shareJson = getShareJson(newNodes)
+                    updateShareIntent(shareJson)
                     peerGroup!!.closeConnections()
                     showProgressBar(false)
                 }
@@ -177,7 +176,8 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                         recentsCount = 0
                         updateRecentsCount()
                         updateCounts()
-                        updateShareIntent()
+                        val shareJson = getShareJson(peerAddresses)
+                        updateShareIntent(shareJson)
                     }
                 }
             }
@@ -304,6 +304,8 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     }
 
     override fun onNothingSelected(parent: AdapterView<*>?) {
+
+
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -345,17 +347,23 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
         }
     }
 
+    private fun getShareJson(nodes: List<PeerAddress>): JSONArray {
+        val array = JSONArray(nodes)
+        for (peerAddress in nodes) { array.put(peerAddress.addr.hostAddress) }
+        return array
+    }
+
+    private fun crowSource() {
+        //
+    }
+
     @Suppress("UnstableApiUsage")
-    private fun updateShareIntent() {
-        val directives = Directives().add("Nodes");
-        for (peerAddress in nodes) {
-            directives.add("Node").set(peerAddress.addr.hostAddress).up();
-        }
+    private fun updateShareIntent(array: JSONArray) {
         val directory = File(filesDir, "nodes")
         directory.mkdirs()
-        val xmlFile = File(directory, "addresses.xml")
+        val xmlFile = File(directory, "addresses.json")
         xmlFile.createNewFile()
-        ByteStreams.copy(ByteArrayInputStream(Xembler(directives).xml().toByteArray(Charset.defaultCharset())), FileOutputStream(xmlFile))
+        ByteStreams.copy(ByteArrayInputStream(array.toString().toByteArray()), FileOutputStream(xmlFile))
 
         val zipFile = File(directory, "addresses.zip")
         ByteStreams.copy(ByteArrayInputStream(ZipUtil.packEntry(xmlFile)), FileOutputStream(zipFile))
@@ -368,7 +376,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
             grantUriPermission(packageName, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         val intent = Intent(Intent.ACTION_SEND)
-        intent.setType("file/zip")
+        intent.type = "file/zip"
         intent.putExtra(Intent.EXTRA_STREAM, uri);
         handler.post { shareActionProvider?.setShareIntent(intent) }
     }
