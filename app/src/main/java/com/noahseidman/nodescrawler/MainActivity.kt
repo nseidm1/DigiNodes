@@ -354,7 +354,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     }
 
     private fun crowSource() {
-        //
+
     }
 
     @Suppress("UnstableApiUsage")

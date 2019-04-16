@@ -253,8 +253,7 @@ public class PeerAddress extends ChildMessage implements Comparable, LayoutBindi
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         PeerAddress other = (PeerAddress) o;
-        return other.addr.getHostAddress().equals(addr.getHostAddress()) &&
-                other.port == port && other.time.equals(time);
+        return other.addr.getHostAddress().equals(addr.getHostAddress());
     }
 
     @Override
