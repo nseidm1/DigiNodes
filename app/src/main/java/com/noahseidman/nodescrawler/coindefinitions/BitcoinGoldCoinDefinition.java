@@ -47,6 +47,6 @@ public class BitcoinGoldCoinDefinition implements Definition {
 
     @Override
     public long getPacketMagic() {
-        return 0xe147d44;
+        return 0xe1476d44;
     }
 }
