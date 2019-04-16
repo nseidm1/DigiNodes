@@ -21,6 +21,11 @@ public class DigiByteCoinDefition implements Definition {
             "dgb.cryptoservices.net",
             "digibytewiki.com",
             "digiexplorer.info",
+            "seed1.digibyte.io",
+            "seed2.digibyte.io",
+            "seed3.digibyte.io",
+            "digihash.co",
+            "seed.digibyteprojects.com",
             "seed.digibyte.io"
     };
 
@@ -30,7 +35,7 @@ public class DigiByteCoinDefition implements Definition {
     }
 
     @Override
-    public int getProtocolVersion() {
+    public int getMinProtocolVersion() {
         return 70016;
     }
 

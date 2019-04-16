@@ -27,8 +27,8 @@ public class SyscoinDefinition implements Definition {
     }
 
     @Override
-    public int getProtocolVersion() {
-        return 70227;
+    public int getMinProtocolVersion() {
+        return 70224;
     }
 
     @Override

@@ -28,7 +28,7 @@ public class PivxCoinDefinition implements Definition {
     }
 
     @Override
-    public int getProtocolVersion() {
+    public int getMinProtocolVersion() {
         return 70915;
     }
 

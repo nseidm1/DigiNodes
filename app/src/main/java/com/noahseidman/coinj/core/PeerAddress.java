@@ -153,7 +153,8 @@ public class PeerAddress extends ChildMessage implements Comparable, LayoutBindi
         } else {
             time = new Date(0);
         }
-        services = readUint64();
+        //Heavy on memory as BigIntegers build, services are not needed for crawling
+        //services = readUint64();
         byte[] addrBytes = readBytes(16);
         try {
             addr = InetAddress.getByAddress(addrBytes);

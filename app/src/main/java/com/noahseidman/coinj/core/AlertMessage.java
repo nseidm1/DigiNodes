@@ -75,8 +75,11 @@ public class AlertMessage extends Message {
         // We're inside the embedded structure.
         version = readUint32();
         // Read the timestamps. Peercoin uses seconds since the epoch.
-        relayUntil = new Date(readUint64().longValue() * 1000);
-        expiration = new Date(readUint64().longValue() * 1000);
+
+        //Heavy on memory as BigIntegers build, relayUntil and expiration are not needed for crawling
+        //relayUntil = new Date(readUint64().longValue() * 1000);
+        //expiration = new Date(readUint64().longValue() * 1000);
+
         id = readUint32();
         cancel = readUint32();
         // Sets are serialized as <len><item><item><item>....

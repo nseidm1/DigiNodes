@@ -61,6 +61,7 @@ public class Peer extends PeerSocketHandler {
     private final NetworkParameters params;
     private final AbstractBlockChain blockChain;
     public boolean alreadyDisconnectedFlag = false;
+    public int getAddrCount = 0;
 
     // onPeerDisconnected should not be called directly by Peers when a PeerGroup is involved (we don't know the total
     // number of connected peers), thus we use a wrapper that PeerGroup can use to register listeners that wont get
@@ -392,7 +393,7 @@ public class Peer extends PeerSocketHandler {
         } else if (m instanceof Pong) {
             processPong((Pong)m);
         } else {
-            log.warn("Received unhandled message: {}", m);
+            //noisy - log.warn("Received unhandled message: {}", m);
         }
         onAnyMessage();
     }
@@ -419,11 +420,13 @@ public class Peer extends PeerSocketHandler {
         // mode nodes because we can't download the data from them we need to find/verify transactions. Some bogus
         // implementations claim to have a block chain in their services field but then report a height of zero, filter
         // them out here.
-        if (!vPeerVersionMessage.hasBlockChain() ||
-                (!params.allowEmptyPeerChain() && vPeerVersionMessage.bestHeight <= 0)) {
-            // Shut down the channel
-            throw new ProtocolException("Peer does not have a copy of the block chain.");
-        }
+
+        // For crawling remove blockchain check, we don't need blocks we want a node count
+//        if (!vPeerVersionMessage.hasBlockChain() ||
+//                (!params.allowEmptyPeerChain() && vPeerVersionMessage.bestHeight <= 0)) {
+//            // Shut down the channel
+//            throw new ProtocolException("Peer does not have a copy of the block chain.");
+//        }
         versionHandshakeFuture.set(this);
     }
 

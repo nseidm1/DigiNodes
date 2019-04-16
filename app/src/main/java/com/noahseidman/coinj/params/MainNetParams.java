@@ -28,7 +28,7 @@ public class MainNetParams extends NetworkParameters {
         this.definition = definition;
         port = definition.getPort();
         dnsSeeds = definition.getDnsSeeds();
-        PROTOCOL_VERSION = definition.getProtocolVersion();
+        PROTOCOL_VERSION = definition.getMinProtocolVersion();
         MIN_PROTOCOL_VERSION = PROTOCOL_VERSION;
         acceptableAddressCodes = new int[] { addressHeader, p2shHeader };
         packetMagic = definition.getPacketMagic();

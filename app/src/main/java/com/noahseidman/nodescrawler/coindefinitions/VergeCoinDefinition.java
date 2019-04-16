@@ -39,7 +39,7 @@ public class VergeCoinDefinition implements Definition {
     }
 
     @Override
-    public int getProtocolVersion() {
+    public int getMinProtocolVersion() {
         return 90007;
     }
 

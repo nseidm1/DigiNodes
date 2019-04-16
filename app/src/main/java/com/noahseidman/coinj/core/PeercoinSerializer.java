@@ -234,7 +234,7 @@ public class PeercoinSerializer {
         } else if (command.equals("mempool")) {
             return new MemoryPoolMessage();
         } else {
-            log.warn("No support for deserializing message with name {}", command);
+            //noisy - log.warn("No support for deserializing message with name {}", command);
             return new UnknownMessage(params, command, payloadBytes);
         }
         if (checksum != null)

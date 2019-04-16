@@ -26,7 +26,7 @@ public class ZCashCoinDefition implements Definition {
     }
 
     @Override
-    public int getProtocolVersion() {
+    public int getMinProtocolVersion() {
         return 170007;
     }
 

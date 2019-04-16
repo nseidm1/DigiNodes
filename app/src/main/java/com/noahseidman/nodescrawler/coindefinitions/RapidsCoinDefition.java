@@ -27,7 +27,7 @@ public class RapidsCoinDefition implements Definition {
     }
 
     @Override
-    public int getProtocolVersion() {
+    public int getMinProtocolVersion() {
         return 70914;
     }
 

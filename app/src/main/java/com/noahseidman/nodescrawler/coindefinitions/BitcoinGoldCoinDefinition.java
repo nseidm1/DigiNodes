@@ -26,7 +26,7 @@ public class BitcoinGoldCoinDefinition implements Definition {
     }
 
     @Override
-    public int getProtocolVersion() {
+    public int getMinProtocolVersion() {
         return 70016;
     }
 

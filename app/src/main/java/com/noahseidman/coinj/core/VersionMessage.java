@@ -125,8 +125,10 @@ public class VersionMessage extends Message {
         parsed = true;
 
         clientVersion = (int) readUint32();
-        localServices = readUint64().longValue();
-        time = readUint64().longValue();
+        //Heavy on memory as BigIntegers build, time and localServices is not needed from the version messages for crawling
+        //localServices = readUint64().longValue();
+        //time = readUint64().longValue();
+
         myAddr = new PeerAddress(params, payload, cursor, 0);
         cursor += myAddr.getMessageSize();
         theirAddr = new PeerAddress(params, payload, cursor, 0);
@@ -134,7 +136,9 @@ public class VersionMessage extends Message {
         // uint64 localHostNonce  (random data)
         // We don't care about the localhost nonce. It's used to detect connecting back to yourself in cases where
         // there are NATs and proxies in the way. However we don't listen for inbound connections so it's irrelevant.
-        readUint64();
+
+        //WTF nothing is used with the return value here??? Not needed for crawling
+        //readUint64();
         try {
             // Initialize default values for flags which may not be sent by old nodes
             subVer = "";

@@ -32,7 +32,7 @@ public class BitcoinCoinDefition implements Definition {
     }
 
     @Override
-    public int getProtocolVersion() {
+    public int getMinProtocolVersion() {
         return 70015;
     }
 

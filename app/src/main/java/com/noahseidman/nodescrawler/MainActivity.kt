@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.Menu
 import android.view.View
 import android.widget.AdapterView
@@ -97,7 +98,6 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     }
 
     private fun shutdownExistingPeer(shutdownCompleteCallback: OnShutdownCompleteCallback? = null) {
-        spinner.isEnabled = false
         getNewPeerFlag = false
         getAddresses?.cancel()
         adapter_nodes.clear()
@@ -133,18 +133,15 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
             override fun onPeersDiscovered(peer: Peer, peerAddresses: List<PeerAddress>) {
                 scheduledExecutor.execute {
                     showProgressBar(true)
-                    getAddresses?.cancel()
                     showMessage("getAddr received: processing")
-                    processing.progress = 0
-                    processing.max = peerAddresses.size
+                    Log.d("Crawl", "Received: ${peerAddresses.size} nodes from getAddr")
                     val newNodes: LinkedList<PeerAddress> = LinkedList()
                     peerAddresses.forEach {
                         if (nodes.add(it)) {
                             newNodes.add(it)
-                            addNodes(it)
+                            addNode(it)
                             updateCounts()
                         }
-                        processing.progress++
                     }
                     if (newNodes.size > 0) {
                         showMessage("${newNodes.size} new nodes added")
@@ -155,13 +152,17 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                     updateCounts()
                     val shareJson = getShareJson(newNodes)
                     updateShareIntent(shareJson)
-                    peerGroup!!.closeConnections()
+                    if (peer.getAddrCount > 1) {
+                        getAddresses?.cancel()
+                        peerGroup?.closeConnections()
+                    } else {
+                        peer.getAddrCount++
+                    }
                     showProgressBar(false)
                 }
             }
 
             override fun onDnsDiscovery(addresses: Array<out InetSocketAddress>) {
-                handler.post{ spinner.isEnabled = true }
                 scheduledExecutor.execute {
                     if (addresses.isEmpty()) {
                         showMessage("dns discovery: failed")
@@ -170,7 +171,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                         val peerAddresses = addresses.map { PeerAddress(it.address, it.port) }
                         nodes.addAll(peerAddresses)
                         peerAddresses.forEach {
-                            addNodes(it)
+                            addNode(it)
                         }
                         openCount = 0
                         recentsCount = 0
@@ -178,8 +179,10 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                         updateCounts()
                         val shareJson = getShareJson(peerAddresses)
                         updateShareIntent(shareJson)
+                        crowSource(shareJson)
                     }
                 }
+                spinner.isEnabled = true
             }
 
             override fun onPeerDisconnected(peer: Peer) {
@@ -204,8 +207,10 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     private fun showProgressBar(show: Boolean) {
         handler.post {
             if (show) {
+                spinner.isEnabled = false
                 progress.visibility = View.VISIBLE
             } else {
+                spinner.isEnabled = true
                 progress.visibility = View.GONE
             }
         }
@@ -217,9 +222,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     override fun onClick(v: View?) {
         scheduledExecutor.execute {
             try {
-                if (edit.text.isNullOrEmpty()) {
-                    throw NullPointerException()
-                }
+                if (edit.text.isNullOrEmpty()) { throw NullPointerException() }
                 val address = InetAddress.getByName(edit.text.toString())
                 val peerAddress = PeerAddress(address)
                 nodes.add(peerAddress)
@@ -240,73 +243,33 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
 
     override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
         showMessage("starting selected coin")
+        spinner.isEnabled = false
         shutdownExistingPeer(OnShutdownCompleteCallback {
             when (position) {
-                0 -> {
-                    init(DigiByteCoinDefition.get())
-                }
-                1 -> {
-                    init(BitcoinCoinDefition.get())
-                }
-                2 -> {
-                    init(VertCoinDefinition.get())
-                }
-                3 -> {
-                    init(RapidsCoinDefition.get())
-                }
-                4 -> {
-                    init(DogeCoinDefition.get())
-                }
-                5 -> {
-                    init(ZCashCoinDefition.get())
-                }
-                6 -> {
-                    init(DashCoinDefinition.get())
-                }
-                7 -> {
-                    init(BitcoinGoldCoinDefinition.get())
-                }
-                8 -> {
-                    init(BitcoinCashCoinDefinition.get())
-                }
-                9 -> {
-                    init(BitcoinDiamondCoinDefinition.get())
-                }
-                10 -> {
-                    init(BitcoinSVCoinDefinition.get())
-                }
-                11 -> {
-                    init(LitecoinDefinition.get())
-                }
-                12 -> {
-                    init(BlocknetDefinition.get())
-                }
-                13 -> {
-                    init(ZCoinDefinition.get())
-                }
-                14 -> {
-                    init(KomodoDefinition.get())
-                }
-                15 -> {
-                    init(StratisDefinition.get())
-                }
-                16 -> {
-                    init(PivxCoinDefinition.get())
-                }
-                17 -> {
-                    init(MueCoinDefinition.get())
-                }
-                18 -> {
-                    init(PhoreCoinDefinition.get())
-                }
+                0 -> init(DigiByteCoinDefition.get())
+                1 -> init(BitcoinCoinDefition.get())
+                2 -> init(VertCoinDefinition.get())
+                3 -> init(RapidsCoinDefition.get())
+                4 -> init(DogeCoinDefition.get())
+                5 -> init(ZCashCoinDefition.get())
+                6 -> init(DashCoinDefinition.get())
+                7 -> init(BitcoinGoldCoinDefinition.get())
+                8 -> init(BitcoinCashCoinDefinition.get())
+                9 -> init(BitcoinDiamondCoinDefinition.get())
+                10 -> init(BitcoinSVCoinDefinition.get())
+                11 -> init(LitecoinDefinition.get())
+                12 -> init(BlocknetDefinition.get())
+                13 -> init(ZCoinDefinition.get())
+                14 -> init(KomodoDefinition.get())
+                15 -> init(StratisDefinition.get())
+                16 -> init(PivxCoinDefinition.get())
+                17 -> init(MueCoinDefinition.get())
+                18 -> init(PhoreCoinDefinition.get())
             }
         })
     }
 
-    override fun onNothingSelected(parent: AdapterView<*>?) {
-
-
-    }
+    override fun onNothingSelected(parent: AdapterView<*>?) {}
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.share, menu)
@@ -320,7 +283,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     /////Update UI methods
     //////////////////////
 
-    private fun addNodes(peerAddress: PeerAddress) {
+    private fun addNode(peerAddress: PeerAddress) {
         handler.post {
             adapter_nodes.addItem(peerAddress)
             handler.post {
@@ -349,11 +312,12 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
 
     private fun getShareJson(nodes: List<PeerAddress>): JSONArray {
         val array = JSONArray(nodes)
+        array.put(SelectedNetParams.instance.coinName)
         for (peerAddress in nodes) { array.put(peerAddress.addr.hostAddress) }
         return array
     }
 
-    private fun crowSource() {
+    private fun crowSource(shareJson: JSONArray) {
 
     }
 
@@ -384,9 +348,10 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     private fun updateRecentsCount() {
         calendar.timeInMillis = System.currentTimeMillis()
         calendar.add(Calendar.HOUR, -8)
+        val currentTime = calendar.time
         var count = 0
         for (peerAddress in nodes) {
-            if (peerAddress.time.after(calendar.time)) {
+            if (peerAddress.time.after(currentTime)) {
                 count++
             }
         }
