@@ -31,6 +31,7 @@ import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.UnknownHostException
 import java.util.*
+import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
@@ -43,7 +44,8 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     private lateinit var adapter_nodes: MultiTypeDataBoundAdapter
     private lateinit var adapter_info: MultiTypeDataBoundAdapter
     private var generalExecutor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
-    private var openCheckerExecutor: ScheduledExecutorService = Executors.newScheduledThreadPool(2)
+    private var exportAggregatorExecutor: Executor = Executors.newSingleThreadExecutor()
+    private var openCheckerExecutor: ScheduledExecutorService = Executors.newScheduledThreadPool(4)
     private var peerGroup: PeerGroup? = null
     private var shareActionProvider: ShareActionProvider? = null
     private var getAddresses: GetAddressesRunnable? = null
@@ -52,6 +54,13 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     private var openCount = 0
     private var recentsCount = 0
     private val exportJson = JSONArray()
+    private var firstOpenCheckRunnable = false
+    private var secondOpenCheckRunnable = false
+    private var thirdOpenCheckRunnable = false
+
+    companion object {
+        private var openCheckIndex = 0
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -89,8 +98,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     private fun init(networkParameters: NetworkParameters) {
         exportJson.put(networkParameters.coinName)
         generalExecutor.scheduleAtFixedRate(RequestNewPeerRunnable(this), 2500, 2500, TimeUnit.MILLISECONDS)
-        openCheckerExecutor.scheduleAtFixedRate(OpenCheckerRunnable(this, 1000), 3000, 1, TimeUnit.MILLISECONDS)
-        openCheckerExecutor.scheduleAtFixedRate(OpenCheckerRunnable(this, 5000), 3000, 1, TimeUnit.MILLISECONDS)
+        openCheckerExecutor.scheduleAtFixedRate(OpenCheckerRunnable(this, 2500), 3000, 1, TimeUnit.MILLISECONDS)
         generalExecutor.execute {
             showProgressBar(true)
             setupNewPeerGroup(networkParameters)
@@ -144,9 +152,6 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                         if (nodes.add(it)) {
                             newNodes.add(it)
                             exportJson.put(it.addr.hostAddress)
-                        } else if (nodes.elementAt(nodes.indexOf(it)).time.before(it.time)) {
-                            // Update node if the timestamp is more recent
-                            nodes.elementAt(nodes.indexOf(it)).time = it.time
                         }
                     }
                     updateCounts()
@@ -159,6 +164,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                     updateRecentsCount()
                     updateCounts()
                     updateShareIntent()
+                    processStackedOpenCheckers();
                     if (peer.getAddrCount >= 1) {
                         getAddresses?.cancel()
                         peerGroup?.closeConnections()
@@ -286,6 +292,21 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
         return true
     }
 
+    private fun processStackedOpenCheckers() {
+        if (nodes.size > 100 && !firstOpenCheckRunnable) {
+            firstOpenCheckRunnable = true
+            openCheckerExecutor.scheduleAtFixedRate(OpenCheckerRunnable(this@MainActivity, 350), 0, 1, TimeUnit.MILLISECONDS)
+        }
+        if (nodes.size > 250 && !secondOpenCheckRunnable) {
+            secondOpenCheckRunnable = true
+            openCheckerExecutor.scheduleAtFixedRate(OpenCheckerRunnable(this@MainActivity, 250), 0, 1, TimeUnit.MILLISECONDS)
+        }
+        if (nodes.size > 500 && !thirdOpenCheckRunnable) {
+            thirdOpenCheckRunnable = true
+            openCheckerExecutor.scheduleAtFixedRate(OpenCheckerRunnable(this@MainActivity, 150), 0, 1, TimeUnit.MILLISECONDS)
+        }
+    }
+
     //////////////////////
     /////Update UI methods
     //////////////////////
@@ -319,28 +340,34 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
 
     @Suppress("UnstableApiUsage")
     private fun updateShareIntent() {
-        val directory = File(filesDir, "nodes")
-        directory.mkdirs()
-        val jsonFile = File(directory, "addresses.json")
-        jsonFile.createNewFile()
-        ByteStreams.copy(ByteArrayInputStream(exportJson.toString().toByteArray()), FileOutputStream(jsonFile))
+        exportAggregatorExecutor.execute {
+            try {
+                val directory = File(filesDir, "nodes")
+                directory.mkdirs()
+                val jsonFile = File(directory, "addresses.json")
+                jsonFile.createNewFile()
+                ByteStreams.copy(ByteArrayInputStream(exportJson.toString().toByteArray()), FileOutputStream(jsonFile))
 
-        val zipFile = File(directory, "addresses.zip")
-        zipFile.delete()
-        zipFile.createNewFile()
-        ByteStreams.copy(ByteArrayInputStream(ZipUtil.packEntry(jsonFile)), FileOutputStream(zipFile))
-        jsonFile.delete()
+                val zipFile = File(directory, "addresses.zip")
+                zipFile.delete()
+                zipFile.createNewFile()
+                ByteStreams.copy(ByteArrayInputStream(ZipUtil.packEntry(jsonFile)), FileOutputStream(zipFile))
+                jsonFile.delete()
 
-        val uri = FileProvider.getUriForFile(this, "com.noahseidman.nodescrawler.fileprovider", zipFile)
-        val resInfoList = getPackageManager().queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY);
-        for (resolveInfo in resInfoList) {
-            val packageName = resolveInfo.activityInfo.packageName;
-            grantUriPermission(packageName, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                val uri = FileProvider.getUriForFile(this, "com.noahseidman.nodescrawler.fileprovider", zipFile)
+                val resInfoList = getPackageManager().queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY);
+                for (resolveInfo in resInfoList) {
+                    val packageName = resolveInfo.activityInfo.packageName;
+                    grantUriPermission(packageName, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                val intent = Intent(Intent.ACTION_SEND)
+                intent.type = "file/zip"
+                intent.putExtra(Intent.EXTRA_STREAM, uri);
+                handler.post { shareActionProvider?.setShareIntent(intent) }
+            } catch(e: Exception) {
+                e.printStackTrace()
+            }
         }
-        val intent = Intent(Intent.ACTION_SEND)
-        intent.type = "file/zip"
-        intent.putExtra(Intent.EXTRA_STREAM, uri);
-        handler.post { shareActionProvider?.setShareIntent(intent) }
     }
 
     private fun updateRecentsCount() {
@@ -376,14 +403,16 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     private class OpenCheckerRunnable(val activity: MainActivity, val timeout: Int): Runnable {
         override fun run() {
             if (activity.nodes.isNotEmpty()) {
-                val peerAddress = activity.nodes.random()
+                val peerAddress = activity.nodes.elementAt(openCheckIndex)
                 if (!peerAddress.open && NetUtils.checkServerListening(peerAddress, timeout)) {
-                    activity.updateCounts()
                     peerAddress.open = true
+                    activity.updateCounts()
                     activity.openCount++
-                    Log.d("Node Check", "$peerAddress is open")
+                }
+                if (openCheckIndex < activity.nodes.size - 1) {
+                    openCheckIndex++
                 } else {
-                    Log.d("Node Check", "$peerAddress is not open")
+                    openCheckIndex = 0
                 }
             }
         }
