@@ -382,7 +382,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
         override fun run() {
             if (!activity.nodes.isEmpty()) {
                 val peerAddress = activity.nodes.random()
-                if (!peerAddress.open && NetUtils.checkServerListening(peerAddress.addr.hostAddress, SelectedNetParams.instance.port, speed)) {
+                if (!peerAddress.open && NetUtils.checkServerListening(peerAddress.addr.hostAddress, peerAddress.port, speed)) {
                     activity.updateCounts()
                     peerAddress.open = true
                     activity.openCount++
