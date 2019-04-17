@@ -127,10 +127,6 @@ public class PeerGroup {
         channels.closeConnections(channels.getConnectedClientCount());
     }
 
-    public boolean hasConnections() {
-        return channels.getConnectedClientCount() > 0;
-    }
-
     public Peer connectTo(PeerAddress address) {
         VersionMessage ver = getVersionMessage().duplicate();
         ver.bestHeight = 0;

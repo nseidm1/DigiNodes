@@ -16,7 +16,6 @@ import androidx.core.content.FileProvider
 import androidx.core.view.MenuItemCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.common.io.ByteStreams
-import com.google.common.net.InetAddresses
 import com.noahseidman.coinj.core.*
 import com.noahseidman.coinj.net.discovery.DnsDiscovery
 import com.noahseidman.nodescrawler.adapter.MultiTypeDataBoundAdapter
@@ -43,8 +42,8 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     private val handler = Handler(Looper.getMainLooper())
     private lateinit var adapter_nodes: MultiTypeDataBoundAdapter
     private lateinit var adapter_info: MultiTypeDataBoundAdapter
-    private var scheduledExecutor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
-    private var openCheckerExecutor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
+    private var generalExecutor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
+    private var openCheckerExecutor: ScheduledExecutorService = Executors.newScheduledThreadPool(2)
     private var peerGroup: PeerGroup? = null
     private var shareActionProvider: ShareActionProvider? = null
     private var getAddresses: GetAddressesRunnable? = null
@@ -52,6 +51,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     private var getNewPeerFlag = true
     private var openCount = 0
     private var recentsCount = 0
+    private val exportJson = JSONArray()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -87,9 +87,11 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     }
 
     private fun init(networkParameters: NetworkParameters) {
-        scheduledExecutor.scheduleAtFixedRate(RequestNewPeerRunnable(this), 2500, 2500, TimeUnit.MILLISECONDS)
-        openCheckerExecutor.scheduleAtFixedRate(OpenCheckerRunnable(this, 1000), 2500, 1, TimeUnit.MILLISECONDS)
-        scheduledExecutor.execute {
+        exportJson.put(networkParameters.coinName)
+        generalExecutor.scheduleAtFixedRate(RequestNewPeerRunnable(this), 2500, 2500, TimeUnit.MILLISECONDS)
+        openCheckerExecutor.scheduleAtFixedRate(OpenCheckerRunnable(this, 1000), 3000, 1, TimeUnit.MILLISECONDS)
+        openCheckerExecutor.scheduleAtFixedRate(OpenCheckerRunnable(this, 5000), 3000, 1, TimeUnit.MILLISECONDS)
+        generalExecutor.execute {
             showProgressBar(true)
             setupNewPeerGroup(networkParameters)
             peerGroup!!.startUp()
@@ -122,29 +124,33 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
         peerGroup = PeerGroup(SelectedNetParams.instance)
         peerGroup!!.addEventListener(object: AbstractPeerEventListener() {
             override fun onPeerConnected(peer: Peer) {
-                scheduledExecutor.let {
+                generalExecutor.let {
                     peer.connectionOpenFuture.addListener(Runnable {
                         getAddresses?.cancel()
                         getAddresses = GetAddressesRunnable(this@MainActivity, peer, peerGroup!!)
-                        scheduledExecutor.schedule(getAddresses, 0, TimeUnit.MILLISECONDS)
+                        generalExecutor.schedule(getAddresses, 0, TimeUnit.MILLISECONDS)
                     }, it)
                 }
             }
 
             override fun onPeersDiscovered(peer: Peer, peerAddresses: List<PeerAddress>) {
-                scheduledExecutor.execute {
+                generalExecutor.execute {
                     showProgressBar(true)
                     showMessage("getAddr received: processing")
                     Log.d("Crawl", "Received: ${peerAddresses.size} nodes from getAddr")
                     val newNodes: LinkedList<PeerAddress> = LinkedList()
-                    peerAddresses.filter { InetAddresses.isInetAddress(it.addr.hostAddress) }.forEach {
+                    peerAddresses.forEach {
                         Log.d("Addresses", "Address: " + it.addr.hostAddress)
                         if (nodes.add(it)) {
                             newNodes.add(it)
-                            addNode(it)
-                            updateCounts()
+                            exportJson.put(it.addr.hostAddress)
+                        } else if (nodes.elementAt(nodes.indexOf(it)).time.before(it.time)) {
+                            // Update node if the timestamp is more recent
+                            nodes.elementAt(nodes.indexOf(it)).time = it.time
                         }
                     }
+                    updateCounts()
+                    addNodes(newNodes)
                     if (newNodes.size > 0) {
                         showMessage("${newNodes.size} new nodes added")
                     } else {
@@ -152,9 +158,8 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                     }
                     updateRecentsCount()
                     updateCounts()
-                    val shareJson = getShareJson(newNodes)
-                    updateShareIntent(shareJson)
-                    if (peer.getAddrCount > 1) {
+                    updateShareIntent()
+                    if (peer.getAddrCount >= 1) {
                         getAddresses?.cancel()
                         peerGroup?.closeConnections()
                     } else {
@@ -165,31 +170,29 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
             }
 
             override fun onDnsDiscovery(addresses: Array<out InetSocketAddress>?) {
-                scheduledExecutor.execute {
+                generalExecutor.execute {
                     if (addresses.isNullOrEmpty()) {
                         showMessage("dns discovery: failed")
                     } else {
                         showMessage("dns discovery: success")
                         val peerAddresses = addresses.map { PeerAddress(it.address, it.port) }
-                        peerAddresses.filter { InetAddresses.isInetAddress(it.addr.hostAddress) }.forEach {
-                            if (nodes.add(it)) {
-                                addNode(it)
-                            }
+                        nodes.addAll(peerAddresses)
+                        addNodes(peerAddresses)
+                        peerAddresses.forEach {
+                            exportJson.put(it.addr.hostAddress)
                         }
                         openCount = 0
                         recentsCount = 0
                         updateRecentsCount()
                         updateCounts()
-                        val shareJson = getShareJson(peerAddresses)
-                        updateShareIntent(shareJson)
-                        crowSource(shareJson)
+                        updateShareIntent()
                     }
                 }
                 handler.post{ spinner.isEnabled = true }
             }
 
             override fun onPeerDisconnected(peer: Peer) {
-                scheduledExecutor.let {
+                generalExecutor.let {
                     if (!peer.alreadyDisconnectedFlag) { peer.alreadyDisconnectedFlag = true } else { return }
                     getAddresses?.cancel()
                     peerGroup?.closeConnections()
@@ -223,7 +226,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
      * For the add custom address button
      */
     override fun onClick(v: View?) {
-        scheduledExecutor.execute {
+        generalExecutor.execute {
             try {
                 if (edit.text.isNullOrEmpty()) { throw NullPointerException() }
                 val address = InetAddress.getByName(edit.text.toString())
@@ -287,9 +290,9 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     /////Update UI methods
     //////////////////////
 
-    private fun addNode(peerAddress: PeerAddress) {
+    private fun addNodes(peerAddresses: List<PeerAddress>) {
         handler.post {
-            adapter_nodes.addItem(peerAddress)
+            adapter_nodes.addItems(peerAddresses)
             handler.post {
                 scrollToBottom()
             }
@@ -314,28 +317,19 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
         }
     }
 
-    private fun getShareJson(nodes: List<PeerAddress>): JSONArray {
-        val array = JSONArray(nodes)
-        array.put(SelectedNetParams.instance.coinName)
-        for (peerAddress in nodes) { array.put(peerAddress.addr.hostAddress) }
-        return array
-    }
-
-    private fun crowSource(shareJson: JSONArray) {
-
-    }
-
     @Suppress("UnstableApiUsage")
-    private fun updateShareIntent(array: JSONArray) {
+    private fun updateShareIntent() {
         val directory = File(filesDir, "nodes")
         directory.mkdirs()
-        val xmlFile = File(directory, "addresses.json")
-        xmlFile.createNewFile()
-        ByteStreams.copy(ByteArrayInputStream(array.toString().toByteArray()), FileOutputStream(xmlFile))
+        val jsonFile = File(directory, "addresses.json")
+        jsonFile.createNewFile()
+        ByteStreams.copy(ByteArrayInputStream(exportJson.toString().toByteArray()), FileOutputStream(jsonFile))
 
         val zipFile = File(directory, "addresses.zip")
-        ByteStreams.copy(ByteArrayInputStream(ZipUtil.packEntry(xmlFile)), FileOutputStream(zipFile))
-        xmlFile.delete()
+        zipFile.delete()
+        zipFile.createNewFile()
+        ByteStreams.copy(ByteArrayInputStream(ZipUtil.packEntry(jsonFile)), FileOutputStream(zipFile))
+        jsonFile.delete()
 
         val uri = FileProvider.getUriForFile(this, "com.noahseidman.nodescrawler.fileprovider", zipFile)
         val resInfoList = getPackageManager().queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY);
@@ -379,14 +373,17 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     /////Runnables
     ////////////////////
 
-    private class OpenCheckerRunnable(val activity: MainActivity, val speed: Int): Runnable {
+    private class OpenCheckerRunnable(val activity: MainActivity, val timeout: Int): Runnable {
         override fun run() {
-            if (!activity.nodes.isEmpty()) {
+            if (activity.nodes.isNotEmpty()) {
                 val peerAddress = activity.nodes.random()
-                if (!peerAddress.open && NetUtils.checkServerListening(peerAddress.addr.hostAddress, peerAddress.port, speed)) {
+                if (!peerAddress.open && NetUtils.checkServerListening(peerAddress, timeout)) {
                     activity.updateCounts()
                     peerAddress.open = true
                     activity.openCount++
+                    Log.d("Node Check", "$peerAddress is open")
+                } else {
+                    Log.d("Node Check", "$peerAddress is not open")
                 }
             }
         }
@@ -410,7 +407,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                 activity.showMessage("sending getAddr: #" + sendGetAddrCount)
                 peer.getAddresses()
                 sendGetAddrCount++
-                activity.scheduledExecutor.schedule(this, 3000, TimeUnit.MILLISECONDS)
+                activity.generalExecutor.schedule(this, 3000, TimeUnit.MILLISECONDS)
             }
         }
     }
@@ -423,7 +420,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
             val openNode = activity.getNewOpenPeer()
             openNode?.let {
                 activity.showMessage("requesting new node")
-                activity.scheduledExecutor.schedule( { activity.peerGroup?.connectTo(it) }, 1000, TimeUnit.MILLISECONDS)
+                activity.generalExecutor.schedule( { activity.peerGroup?.connectTo(it) }, 1000, TimeUnit.MILLISECONDS)
                 activity.getNewPeerFlag = false
             }
         }

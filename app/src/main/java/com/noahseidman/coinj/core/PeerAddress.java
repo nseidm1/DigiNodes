@@ -26,6 +26,8 @@ import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Date;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -239,7 +241,6 @@ public class PeerAddress extends ChildMessage implements Comparable, LayoutBindi
      * @param time the time to set
      */
     public void setTime(Date time) {
-        unCache();
         this.time = time;
     }
 
@@ -251,15 +252,16 @@ public class PeerAddress extends ChildMessage implements Comparable, LayoutBindi
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (o == null) {
+            return false;
+        }
         PeerAddress other = (PeerAddress) o;
-        return other.addr.getHostAddress().equals(addr.getHostAddress());
+        return Arrays.equals(other.addr.getAddress(), addr.getAddress()) && other.addr.getHostAddress().equals(addr.getHostAddress());
     }
 
     @Override
     public int hashCode() {
-        return addr.hashCode() ^ port;
+        return ByteBuffer.wrap(addr.getAddress()).getInt();
     }
     
     public InetSocketAddress toSocketAddress() {
