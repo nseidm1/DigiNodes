@@ -31,21 +31,18 @@ import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.UnknownHostException
 import java.util.*
-import java.util.concurrent.Executor
-import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.*
 
 
 class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnItemSelectedListener {
 
-    private val nodes: LinkedHashSet<PeerAddress> = LinkedHashSet()
+    private val nodes = Collections.newSetFromMap(ConcurrentHashMap<PeerAddress, Boolean>());
     private val handler = Handler(Looper.getMainLooper())
     private lateinit var adapter_nodes: MultiTypeDataBoundAdapter
     private lateinit var adapter_info: MultiTypeDataBoundAdapter
     private var generalExecutor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
     private var exportAggregatorExecutor: Executor = Executors.newSingleThreadExecutor()
-    private var openCheckerExecutor: ScheduledExecutorService = Executors.newScheduledThreadPool(10)
+    private var openCheckerExecutor: Executor = Executors.newCachedThreadPool()
     private var peerGroup: PeerGroup? = null
     private var shareActionProvider: ShareActionProvider? = null
     private var getAddresses: GetAddressesRunnable? = null
@@ -54,11 +51,10 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     private var openCount = 0
     private var recentsCount = 0
     private val exportJson = JSONArray()
-    private var firstOpenCheckRunnable = false
-    private var secondOpenCheckRunnable = false
 
     companion object {
         private var openCheckIndex = 0
+        private val openCheckLock = Any()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -97,7 +93,8 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     private fun init(networkParameters: NetworkParameters) {
         exportJson.put(networkParameters.coinName)
         generalExecutor.scheduleAtFixedRate(RequestNewPeerRunnable(this), 2500, 2500, TimeUnit.MILLISECONDS)
-        openCheckerExecutor.scheduleAtFixedRate(OpenCheckerRunnable(this, 2500), 3000, 1, TimeUnit.MILLISECONDS)
+        openCheckerExecutor.execute(OpenCheckerRunnable(this, 500))
+        openCheckerExecutor.execute(OpenCheckerRunnable(this, 500))
         generalExecutor.execute {
             showProgressBar(true)
             setupNewPeerGroup(networkParameters)
@@ -163,7 +160,6 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                     updateRecentsCount()
                     updateCounts()
                     updateShareIntent()
-                    processStackedOpenCheckers();
                     if (peer.getAddrCount >= 1) {
                         getAddresses?.cancel()
                         peerGroup?.closeConnections()
@@ -291,19 +287,6 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
         return true
     }
 
-    private fun processStackedOpenCheckers() {
-        if (nodes.size > 100 && !firstOpenCheckRunnable) {
-            firstOpenCheckRunnable = true
-            openCheckerExecutor.scheduleAtFixedRate(OpenCheckerRunnable(this@MainActivity, 350), 0, 1, TimeUnit.MILLISECONDS)
-            openCheckerExecutor.scheduleAtFixedRate(OpenCheckerRunnable(this@MainActivity, 350), 0, 1, TimeUnit.MILLISECONDS)
-        }
-        if (nodes.size > 1000 && !secondOpenCheckRunnable) {
-            secondOpenCheckRunnable = true
-            openCheckerExecutor.scheduleAtFixedRate(OpenCheckerRunnable(this@MainActivity, 350), 0, 1, TimeUnit.MILLISECONDS)
-            openCheckerExecutor.scheduleAtFixedRate(OpenCheckerRunnable(this@MainActivity, 350), 0, 1, TimeUnit.MILLISECONDS)
-        }
-    }
-
     //////////////////////
     /////Update UI methods
     //////////////////////
@@ -406,12 +389,15 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                     activity.updateCounts()
                     activity.openCount++
                 }
-                if (openCheckIndex < activity.nodes.size - 1) {
-                    openCheckIndex++
-                } else {
-                    openCheckIndex = 0
+                synchronized(openCheckLock) {
+                    if (openCheckIndex < activity.nodes.size - 1) {
+                        openCheckIndex++
+                    } else {
+                        openCheckIndex = 0
+                    }
                 }
             }
+            activity.openCheckerExecutor.execute(this)
         }
     }
 
