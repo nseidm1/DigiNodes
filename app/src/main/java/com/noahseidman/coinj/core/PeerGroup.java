@@ -17,7 +17,6 @@
 
 package com.noahseidman.coinj.core;
 
-import com.google.common.collect.Lists;
 import com.noahseidman.coinj.net.NioClientManager;
 import com.noahseidman.coinj.net.discovery.PeerDiscovery;
 import com.noahseidman.coinj.net.discovery.PeerDiscoveryException;
@@ -28,7 +27,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
-import java.util.List;
 import java.util.concurrent.*;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -93,16 +91,19 @@ public class PeerGroup {
         
         long start = System.currentTimeMillis();
 
-        final List<PeerAddress> addressList = Lists.newLinkedList();
         for (PeerDiscovery peerDiscovery : discoverers) {
-            InetSocketAddress[] addresses;
-            addresses = peerDiscovery.getPeers(5, TimeUnit.SECONDS);
-            for (final ListenerRegistration<PeerEventListener> registration : peerEventListeners) {
-                registration.executor.execute(() -> registration.listener.onDnsDiscovery(addresses));
+            try {
+                InetSocketAddress[] addresses = peerDiscovery.getPeers(5, TimeUnit.SECONDS);
+                for (final ListenerRegistration<PeerEventListener> registration : peerEventListeners) {
+                    registration.executor.execute(() -> registration.listener.onDnsDiscovery(addresses));
+                }
+            } catch(PeerDiscoveryException e) {
+                for (final ListenerRegistration<PeerEventListener> registration : peerEventListeners) {
+                    registration.executor.execute(() -> registration.listener.onDnsDiscovery(null));
+                }
             }
+
         }
-        log.info("{}eer discovery took {}msec and returned {} items", "P",
-                System.currentTimeMillis() - start, addressList.size());
     }
 
     public void startUp() {

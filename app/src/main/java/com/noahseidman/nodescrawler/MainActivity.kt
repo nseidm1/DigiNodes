@@ -16,6 +16,7 @@ import androidx.core.content.FileProvider
 import androidx.core.view.MenuItemCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.common.io.ByteStreams
+import com.google.common.net.InetAddresses
 import com.noahseidman.coinj.core.*
 import com.noahseidman.coinj.net.discovery.DnsDiscovery
 import com.noahseidman.nodescrawler.adapter.MultiTypeDataBoundAdapter
@@ -136,7 +137,8 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                     showMessage("getAddr received: processing")
                     Log.d("Crawl", "Received: ${peerAddresses.size} nodes from getAddr")
                     val newNodes: LinkedList<PeerAddress> = LinkedList()
-                    peerAddresses.forEach {
+                    peerAddresses.filter { InetAddresses.isInetAddress(it.addr.hostAddress) }.forEach {
+                        Log.d("Addresses", "Address: " + it.addr.hostAddress)
                         if (nodes.add(it)) {
                             newNodes.add(it)
                             addNode(it)
@@ -162,16 +164,17 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                 }
             }
 
-            override fun onDnsDiscovery(addresses: Array<out InetSocketAddress>) {
+            override fun onDnsDiscovery(addresses: Array<out InetSocketAddress>?) {
                 scheduledExecutor.execute {
-                    if (addresses.isEmpty()) {
+                    if (addresses.isNullOrEmpty()) {
                         showMessage("dns discovery: failed")
                     } else {
                         showMessage("dns discovery: success")
                         val peerAddresses = addresses.map { PeerAddress(it.address, it.port) }
-                        nodes.addAll(peerAddresses)
-                        peerAddresses.forEach {
-                            addNode(it)
+                        peerAddresses.filter { InetAddresses.isInetAddress(it.addr.hostAddress) }.forEach {
+                            if (nodes.add(it)) {
+                                addNode(it)
+                            }
                         }
                         openCount = 0
                         recentsCount = 0
@@ -182,7 +185,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                         crowSource(shareJson)
                     }
                 }
-                spinner.isEnabled = true
+                handler.post{ spinner.isEnabled = true }
             }
 
             override fun onPeerDisconnected(peer: Peer) {
