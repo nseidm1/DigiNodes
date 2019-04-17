@@ -275,4 +275,8 @@ public class PeerAddress extends ChildMessage implements Comparable, LayoutBindi
             return 1;
         }
     }
+
+    public void setOpen(boolean open) {
+        this.open = open;
+    }
 }

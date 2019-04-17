@@ -54,7 +54,12 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
 
     companion object {
         private var openCheckIndex = 0
-        private val openCheckLock = Any()
+    }
+
+    init {
+        generalExecutor.scheduleAtFixedRate(RequestNewPeerRunnable(this), 2500, 2500, TimeUnit.MILLISECONDS)
+        openCheckerExecutor.execute(OpenCheckerRunnable(this, 500))
+        openCheckerExecutor.execute(OpenCheckerRunnable(this, 500))
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -92,9 +97,6 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
 
     private fun init(networkParameters: NetworkParameters) {
         exportJson.put(networkParameters.coinName)
-        generalExecutor.scheduleAtFixedRate(RequestNewPeerRunnable(this), 2500, 2500, TimeUnit.MILLISECONDS)
-        openCheckerExecutor.execute(OpenCheckerRunnable(this, 500))
-        openCheckerExecutor.execute(OpenCheckerRunnable(this, 500))
         generalExecutor.execute {
             showProgressBar(true)
             setupNewPeerGroup(networkParameters)
@@ -108,6 +110,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
         getNewPeerFlag = false
         getAddresses?.cancel()
         adapter_nodes.clear()
+        openCheckIndex = 0
         nodes.clear()
         peerGroup?.shutDown()
         peerGroup = null
@@ -306,6 +309,12 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
         }
     }
 
+    private fun updateOpenCheckerCount() {
+        handler.post {
+            open_checker.text = String.format(getString(R.string.open_checker), openCheckIndex)
+        }
+    }
+
     private fun scrollToBottom() {
         (recycler_nodes.layoutManager as LinearLayoutManager).smoothScrollToPosition(recycler_nodes, null, nodes.size)
     }
@@ -382,21 +391,30 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
 
     private class OpenCheckerRunnable(val activity: MainActivity, val timeout: Int): Runnable {
         override fun run() {
+            //Lots of not empty checks to account for coin switching
             if (activity.nodes.isNotEmpty()) {
                 val peerAddress = activity.nodes.elementAt(openCheckIndex)
-                if (!peerAddress.open && NetUtils.checkServerListening(peerAddress, timeout)) {
-                    peerAddress.open = true
-                    activity.updateCounts()
-                    activity.openCount++
+                synchronized(peerAddress) {
+                    if (!peerAddress.open && NetUtils.checkServerListening(peerAddress, timeout) && activity.nodes.isNotEmpty()) {
+                        activity.nodes.remove(peerAddress)
+                        peerAddress.open = true
+                        activity.nodes.add(peerAddress)
+                        activity.updateCounts()
+                        activity.openCount++
+                    }
                 }
-                synchronized(openCheckLock) {
-                    if (openCheckIndex < activity.nodes.size - 1) {
-                        openCheckIndex++
-                    } else {
-                        openCheckIndex = 0
+                if (activity.nodes.isNotEmpty()) {
+                    synchronized(openCheckIndex) {
+                        if (openCheckIndex < activity.nodes.size - 1) {
+                            openCheckIndex++
+                        } else {
+                            openCheckIndex = 0
+                        }
+                        activity.updateOpenCheckerCount()
                     }
                 }
             }
+            Thread.sleep(350)
             activity.openCheckerExecutor.execute(this)
         }
     }

@@ -37,6 +37,11 @@
               android:text="Nodes" android:gravity="center" android:textSize="18sp" android:textStyle="bold"
               android:background="#cccccc"/>
 
+    <TextView android:id="@+id/open_checker" android:padding="16dp" android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:text="Open Checker" android:gravity="center" android:textSize="18sp" android:textStyle="bold"
+              android:background="#cccccc"/>
+
     <androidx.recyclerview.widget.RecyclerView android:layout_width="match_parent" android:id="@+id/recycler_nodes"
                                                android:layout_height="0dp" android:layout_weight="1"/>
 

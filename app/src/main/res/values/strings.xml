@@ -23,4 +23,5 @@
     <string name="pivx">Pivx</string>
     <string name="mue">MUE</string>
     <string name="phore">Phore</string>
+    <string name="open_checker">Open Checking Node: %s</string>
 </resources>
