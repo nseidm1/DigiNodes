@@ -45,7 +45,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     private lateinit var adapter_info: MultiTypeDataBoundAdapter
     private var generalExecutor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
     private var exportAggregatorExecutor: Executor = Executors.newSingleThreadExecutor()
-    private var openCheckerExecutor: ScheduledExecutorService = Executors.newScheduledThreadPool(4)
+    private var openCheckerExecutor: ScheduledExecutorService = Executors.newScheduledThreadPool(6)
     private var peerGroup: PeerGroup? = null
     private var shareActionProvider: ShareActionProvider? = null
     private var getAddresses: GetAddressesRunnable? = null
@@ -56,7 +56,6 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     private val exportJson = JSONArray()
     private var firstOpenCheckRunnable = false
     private var secondOpenCheckRunnable = false
-    private var thirdOpenCheckRunnable = false
 
     companion object {
         private var openCheckIndex = 0
@@ -297,12 +296,8 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
             firstOpenCheckRunnable = true
             openCheckerExecutor.scheduleAtFixedRate(OpenCheckerRunnable(this@MainActivity, 350), 0, 1, TimeUnit.MILLISECONDS)
         }
-        if (nodes.size > 250 && !secondOpenCheckRunnable) {
+        if (nodes.size > 1000 && !secondOpenCheckRunnable) {
             secondOpenCheckRunnable = true
-            openCheckerExecutor.scheduleAtFixedRate(OpenCheckerRunnable(this@MainActivity, 250), 0, 1, TimeUnit.MILLISECONDS)
-        }
-        if (nodes.size > 500 && !thirdOpenCheckRunnable) {
-            thirdOpenCheckRunnable = true
             openCheckerExecutor.scheduleAtFixedRate(OpenCheckerRunnable(this@MainActivity, 150), 0, 1, TimeUnit.MILLISECONDS)
         }
     }

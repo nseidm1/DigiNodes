@@ -16,5 +16,4 @@ public class NetUtils {
             return false;
         }
     }
-
 }
