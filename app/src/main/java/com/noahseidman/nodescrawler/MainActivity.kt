@@ -41,7 +41,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     private lateinit var adapter_nodes: MultiTypeDataBoundAdapter
     private lateinit var adapter_info: MultiTypeDataBoundAdapter
     private var generalExecutor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
-    private var newNodeExecutor: ScheduledExecutorService = Executors.newScheduledThreadPool(2)
+    private var newNodeExecutor: Executor = Executors.newCachedThreadPool()
     private var exportAggregatorExecutor: Executor = Executors.newSingleThreadExecutor()
     private var openCheckerExecutor: Executor = Executors.newCachedThreadPool()
     private var peerGroup: PeerGroup? = null
@@ -52,7 +52,8 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     private var openCount = 0
     private var recentsCount = 0
     private val exportJson = JSONArray()
-    private var openCheckers: Array<OpenCheckerRunnable>
+    private val openCheckers: Array<OpenCheckerRunnable>
+    private val requestNewPeerRunnable: RequestNewPeerRunnable
     private lateinit var shareMenu: MenuItem
 
     companion object {
@@ -60,7 +61,8 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     }
 
     init {
-        newNodeExecutor.scheduleAtFixedRate(RequestNewPeerRunnable(this), 2500, 2500, TimeUnit.MILLISECONDS)
+        requestNewPeerRunnable = RequestNewPeerRunnable(this)
+        newNodeExecutor.execute(requestNewPeerRunnable)
         openCheckers = arrayOf(
             OpenCheckerRunnable(this, 750),
             OpenCheckerRunnable(this, 750),
@@ -106,6 +108,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
         super.onDestroy()
         shutdownExistingPeer()
         OpenCheckerRunnable.shutdown(this)
+        requestNewPeerRunnable.cancel()
     }
 
     private fun init(networkParameters: NetworkParameters) {
@@ -128,7 +131,6 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
         peerGroup?.shutDown()
         peerGroup = null
         handler.postDelayed( {
-            getNewPeerFlag = true
             shutdownCompleteCallback?.onShutdownComplete()
         }, 2500)
     }
@@ -137,7 +139,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
      * Do not call directly, use [init]
      *
      * @param networkParameters
-     * Provide a NetworkParameters instance to create a new getNewPeerFlag
+     * Provide a NetworkParameters instance to create a new Peer
      */
     private fun setupNewPeerGroup(networkParameters: NetworkParameters) {
         SelectedNetParams.instance = networkParameters;
@@ -200,6 +202,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                         }
                         openCount = 0
                         recentsCount = 0
+                        getNewPeerFlag = true
                         updateRecentsCount()
                         updateCounts()
                         updateShareIntent()
@@ -512,15 +515,25 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     }
 
     private class RequestNewPeerRunnable(val activity: MainActivity): Runnable {
+
+        private var canceled = false
+
+        fun cancel() {
+            canceled = true
+        }
+
         override fun run() {
-            if (!activity.getNewPeerFlag) {
-                return
+            if (activity.getNewPeerFlag) {
+                val openNode = activity.getNewOpenPeer()
+                openNode?.let {
+                    activity.showMessage("requesting new node")
+                    activity.generalExecutor.schedule( { activity.peerGroup?.connectTo(it) }, 1000, TimeUnit.MILLISECONDS)
+                    activity.getNewPeerFlag = false
+                }
             }
-            val openNode = activity.getNewOpenPeer()
-            openNode?.let {
-                activity.showMessage("requesting new node")
-                activity.generalExecutor.schedule( { activity.peerGroup?.connectTo(it) }, 1000, TimeUnit.MILLISECONDS)
-                activity.getNewPeerFlag = false
+            if (!canceled) {
+                Thread.sleep(2500)
+                activity.newNodeExecutor.execute(this)
             }
         }
     }
