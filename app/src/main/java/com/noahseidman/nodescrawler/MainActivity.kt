@@ -131,6 +131,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
         nodes.clear()
         peerGroup?.shutDown()
         peerGroup = null
+        nodeIndex = 0
         handler.postDelayed( {
             shutdownCompleteCallback?.onShutdownComplete()
         }, 2500)
