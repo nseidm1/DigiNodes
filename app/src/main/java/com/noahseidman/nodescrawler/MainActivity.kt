@@ -166,20 +166,20 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                             exportJson.put(it.addr.hostAddress)
                         }
                     }
-                    updateCounts()
-                    addNodes(newNodes)
-                    updateRecentsCount()
-                    updateCounts()
-                    updateShareIntent()
                     if (newNodes.size > 0) {
+                        updateCounts()
+                        addNodes(newNodes)
+                        updateRecentsCount()
+                        updateCounts()
+                        updateShareIntent()
                         showMessage("${newNodes.size} new nodes added")
                     } else {
                         showMessage("no new nodes found")
                     }
                     showProgressBar(false)
                     // Messaging delay
-                    Thread.sleep(1000)
-                    if (peer.getAddrCount >= 1) {
+                    Thread.sleep(500)
+                    if (peer.getAddrCount >= Peer.GET_ADDR_LIMIT) {
                         getAddresses?.cancel()
                         peerGroup?.closeConnections()
                     } else {
