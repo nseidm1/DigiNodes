@@ -11,10 +11,10 @@
     <string name="doge">Doge</string>
     <string name="zcash">Zcash</string>
     <string name="dash">Dash</string>
-    <string name="bitcoingold">BTG</string>
-    <string name="bitcoincash">BCH</string>
-    <string name="bitcoindiamond">BCD</string>
-    <string name="bitcoinsv">BSV</string>
+    <string name="bitcoingold">Bitcoin Gold</string>
+    <string name="bitcoincash">Bitcoin Cash</string>
+    <string name="bitcoindiamond">Bitcoin Diamond</string>
+    <string name="bitcoinsv">Bitcoin SV</string>
     <string name="litecoin">Litecoin</string>
     <string name="verge">Verge</string>
     <string name="syscoin">Syscoin</string>
