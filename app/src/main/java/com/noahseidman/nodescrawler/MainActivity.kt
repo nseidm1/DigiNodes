@@ -55,6 +55,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     private val openCheckers: Array<OpenCheckerRunnable>
     private val requestNewPeerRunnable: RequestNewPeerRunnable
     private lateinit var shareMenu: MenuItem
+    private lateinit var recentTime: Date
 
     companion object {
         private var nodeIndex = 0
@@ -159,17 +160,20 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                 generalExecutor.execute {
                     showProgressBar(true)
                     showMessage("getAddr received: processing")
+                    updateTime()
                     val newNodes: LinkedList<PeerAddress> = LinkedList()
                     peerAddresses.forEach {
                         if (nodes.add(it)) {
                             newNodes.add(it)
                             exportJson.put(it.addr.hostAddress)
+                            if (it.time.after(recentTime)) {
+                                recentsCount++
+                            }
                         }
                     }
                     if (newNodes.size > 0) {
                         updateCounts()
                         addNodes(newNodes)
-                        updateRecentsCount()
                         updateCounts()
                         updateShareIntent()
                         showMessage("${newNodes.size} new nodes added")
@@ -177,8 +181,6 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                         showMessage("no new nodes found")
                     }
                     showProgressBar(false)
-                    // Messaging delay
-                    Thread.sleep(500)
                     if (peer.getAddrCount >= Peer.GET_ADDR_LIMIT) {
                         getAddresses?.cancel()
                         peerGroup?.closeConnections()
@@ -194,16 +196,19 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                         showMessage("dns discovery: failed")
                     } else {
                         showMessage("dns discovery: success")
+                        updateTime()
                         val peerAddresses = addresses.map { PeerAddress(it.address, it.port) }
                         nodes.addAll(peerAddresses)
                         addNodes(peerAddresses)
                         peerAddresses.forEach {
                             exportJson.put(it.addr.hostAddress)
+                            if (it.time.after(recentTime)) {
+                                recentsCount++
+                            }
                         }
                         openCount = 0
                         recentsCount = 0
                         getNewPeerFlag = true
-                        updateRecentsCount()
                         updateCounts()
                         updateShareIntent()
                     }
@@ -228,6 +233,12 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
             }
         })
         peerGroup!!.addPeerDiscovery(DnsDiscovery(SelectedNetParams.instance))
+    }
+
+    private fun updateTime() {
+        calendar.timeInMillis = System.currentTimeMillis()
+        calendar.add(Calendar.HOUR, -8)
+        recentTime = calendar.time
     }
 
     private fun showProgressBar(show: Boolean) {
@@ -381,19 +392,6 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                 e.printStackTrace()
             }
         }
-    }
-
-    private fun updateRecentsCount() {
-        calendar.timeInMillis = System.currentTimeMillis()
-        calendar.add(Calendar.HOUR, -8)
-        val currentTime = calendar.time
-        var count = 0
-        nodes.forEach {
-            if (it.time.after(currentTime)) {
-                count++
-            }
-        }
-        this.recentsCount = count
     }
 
     private fun getNewOpenPeer(): PeerAddress? {
