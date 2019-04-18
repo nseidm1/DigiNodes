@@ -5,8 +5,8 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import android.view.Menu
+import android.view.MenuItem
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
@@ -51,15 +51,26 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     private var openCount = 0
     private var recentsCount = 0
     private val exportJson = JSONArray()
+    private var openCheckers: Array<OpenCheckerRunnable>
+    private lateinit var shareMenu: MenuItem
 
     companion object {
-        private var openCheckIndex = 0
+        private var nodeIndex = 0
     }
 
     init {
         generalExecutor.scheduleAtFixedRate(RequestNewPeerRunnable(this), 2500, 2500, TimeUnit.MILLISECONDS)
-        openCheckerExecutor.execute(OpenCheckerRunnable(this, 500))
-        openCheckerExecutor.execute(OpenCheckerRunnable(this, 500))
+        openCheckers = arrayOf(
+            OpenCheckerRunnable(this, 750),
+            OpenCheckerRunnable(this, 750),
+            OpenCheckerRunnable(this, 750),
+            OpenCheckerRunnable(this, 750),
+            OpenCheckerRunnable(this, 750),
+            OpenCheckerRunnable(this, 750)
+        )
+        openCheckers.forEach {
+            openCheckerExecutor.execute(it)
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -93,6 +104,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     override fun onDestroy() {
         super.onDestroy()
         shutdownExistingPeer()
+        OpenCheckerRunnable.shutdown(this)
     }
 
     private fun init(networkParameters: NetworkParameters) {
@@ -110,7 +122,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
         getNewPeerFlag = false
         getAddresses?.cancel()
         adapter_nodes.clear()
-        openCheckIndex = 0
+        openCheckers.forEach { it.reset() }
         nodes.clear()
         peerGroup?.shutDown()
         peerGroup = null
@@ -144,10 +156,8 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                 generalExecutor.execute {
                     showProgressBar(true)
                     showMessage("getAddr received: processing")
-                    Log.d("Crawl", "Received: ${peerAddresses.size} nodes from getAddr")
                     val newNodes: LinkedList<PeerAddress> = LinkedList()
                     peerAddresses.forEach {
-                        Log.d("Addresses", "Address: " + it.addr.hostAddress)
                         if (nodes.add(it)) {
                             newNodes.add(it)
                             exportJson.put(it.addr.hostAddress)
@@ -155,21 +165,23 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                     }
                     updateCounts()
                     addNodes(newNodes)
+                    updateRecentsCount()
+                    updateCounts()
+                    updateShareIntent()
                     if (newNodes.size > 0) {
                         showMessage("${newNodes.size} new nodes added")
                     } else {
                         showMessage("no new nodes found")
                     }
-                    updateRecentsCount()
-                    updateCounts()
-                    updateShareIntent()
+                    showProgressBar(false)
+                    // Messaging delay
+                    Thread.sleep(1000)
                     if (peer.getAddrCount >= 1) {
                         getAddresses?.cancel()
                         peerGroup?.closeConnections()
                     } else {
                         peer.getAddrCount++
                     }
-                    showProgressBar(false)
                 }
             }
 
@@ -217,9 +229,11 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     private fun showProgressBar(show: Boolean) {
         handler.post {
             if (show) {
+                shareMenu.isVisible = false
                 spinner.isEnabled = false
                 progress.visibility = View.VISIBLE
             } else {
+                shareMenu.isVisible = true
                 spinner.isEnabled = true
                 progress.visibility = View.GONE
             }
@@ -284,9 +298,8 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.share, menu)
-        menu.findItem(R.id.menu_item_share).also { menuItem ->
-            shareActionProvider = MenuItemCompat.getActionProvider(menuItem) as? ShareActionProvider
-        }
+        shareMenu = menu.findItem(R.id.menu_item_share)
+        shareActionProvider = MenuItemCompat.getActionProvider(shareMenu) as? ShareActionProvider
         return true
     }
 
@@ -311,8 +324,15 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
 
     private fun updateOpenCheckerCount() {
         handler.post {
-            open_checker.text = String.format(getString(R.string.open_checker), openCheckIndex)
+            open_checker.text =
+                String.format(getString(R.string.open_checker), *getOpenCheckerIndexes().toTypedArray())
         }
+    }
+
+    private fun getOpenCheckerIndexes(): LinkedList<Int> {
+        val counts = LinkedList<Int>()
+        openCheckers.forEach { counts.add(it.getLocalIndex()) }
+        return counts
     }
 
     private fun scrollToBottom() {
@@ -364,8 +384,8 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
         calendar.add(Calendar.HOUR, -8)
         val currentTime = calendar.time
         var count = 0
-        for (peerAddress in nodes) {
-            if (peerAddress.time.after(currentTime)) {
+        nodes.forEach {
+            if (it.time.after(currentTime)) {
                 count++
             }
         }
@@ -376,12 +396,19 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
         if (nodes.isEmpty()) {
             return null
         }
-        val openList = nodes.filter { it.open }
-        if (openList.isEmpty()) {
+        val filteredList = nodes.filter { it.open }
+        if (filteredList.isEmpty()) {
             return null
         } else {
-            return openList.random()
-
+            try{
+                return filteredList.elementAt(nodeIndex)
+            } finally {
+                if (nodeIndex < filteredList.size - 1) {
+                    nodeIndex++
+                } else {
+                    nodeIndex = 0
+                }
+            }
         }
     }
 
@@ -390,12 +417,33 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     ////////////////////
 
     private class OpenCheckerRunnable(val activity: MainActivity, val timeout: Int): Runnable {
+
+        private var canceled = false
+        private var localIndex = 0
+
+        companion object {
+            fun shutdown(activity: MainActivity) {
+                activity.openCheckers.forEach { it.cancel() }
+            }
+        }
+
+        fun cancel() {
+            canceled = true
+        }
+
+        fun getLocalIndex(): Int {
+            return localIndex
+        }
+
+        fun reset() {
+            localIndex = 0
+        }
+
         override fun run() {
-            //Lots of not empty checks to account for coin switching
             if (activity.nodes.isNotEmpty()) {
-                val peerAddress = activity.nodes.elementAt(openCheckIndex)
+                val peerAddress = activity.nodes.elementAt(localIndex)
                 synchronized(peerAddress) {
-                    if (!peerAddress.open && NetUtils.checkServerListening(peerAddress, timeout) && activity.nodes.isNotEmpty()) {
+                    if (!peerAddress.open && NetUtils.checkServerListening(peerAddress, timeout)) {
                         activity.nodes.remove(peerAddress)
                         peerAddress.open = true
                         activity.nodes.add(peerAddress)
@@ -403,20 +451,30 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                         activity.openCount++
                     }
                 }
-                if (activity.nodes.isNotEmpty()) {
-                    synchronized(openCheckIndex) {
-                        if (openCheckIndex < activity.nodes.size - 1) {
-                            openCheckIndex++
-                        } else {
-                            openCheckIndex = 0
-                        }
-                        activity.updateOpenCheckerCount()
+                synchronized(activity.openCheckers) {
+                    val nextIndex = activity.getNextIndex()
+                    if (nextIndex < activity.nodes.size - 1) {
+                        localIndex = nextIndex
+                    } else {
+                        localIndex = 0
                     }
                 }
+                activity.updateOpenCheckerCount()
             }
-            Thread.sleep(350)
-            activity.openCheckerExecutor.execute(this)
+            if (!canceled) {
+                Thread.sleep(350)
+                activity.openCheckerExecutor.execute(this)
+            }
         }
+    }
+
+    private fun getNextIndex(): Int {
+        val indexes = getOpenCheckerIndexes()
+        var max = 0
+        indexes.forEach {
+            max = Math.max(it, max)
+        }
+        return max + 1
     }
 
     private class GetAddressesRunnable(val activity: MainActivity, val peer: Peer, val peerGroup: PeerGroup): Runnable {

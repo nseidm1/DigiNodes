@@ -1,7 +1,9 @@
 <resources>
     <string name="app_name">DigiByte Node Crawler</string>
     <string name="messages">Messages (%s)</string>
+    <string name="messages_default">Messages (0)</string>
     <string name="nodes">Nodes (%s) Open (%s) Recent (%s)</string>
+    <string name="nodes_default">Nodes (0) Open (0) Recent (0)</string>
     <string name="digibyte">DigiByte</string>
     <string name="bitcoin">Bitcoin</string>
     <string name="vertcoin">Vertcoin</string>
@@ -9,10 +11,10 @@
     <string name="doge">Doge</string>
     <string name="zcash">Zcash</string>
     <string name="dash">Dash</string>
-    <string name="bitcoingold">Bitcoin Gold</string>
-    <string name="bitcoincash">Bitcoin Cash</string>
-    <string name="bitcoindiamond">Bitcoin Diamond</string>
-    <string name="bitcoinsv">Bitcoin SV</string>
+    <string name="bitcoingold">BTG</string>
+    <string name="bitcoincash">BCH</string>
+    <string name="bitcoindiamond">BCD</string>
+    <string name="bitcoinsv">BSV</string>
     <string name="litecoin">Litecoin</string>
     <string name="verge">Verge</string>
     <string name="syscoin">Syscoin</string>
@@ -23,5 +25,6 @@
     <string name="pivx">Pivx</string>
     <string name="mue">MUE</string>
     <string name="phore">Phore</string>
-    <string name="open_checker">Open Checking Node: %s</string>
+    <string name="open_checker">Open Checkers\n%s - %s - %s\n%s - %s - %s</string>
+    <string name="open_checker_default">Open Checkers\n0 - 0 - 0\n0 - 0 - 0</string>
 </resources>
