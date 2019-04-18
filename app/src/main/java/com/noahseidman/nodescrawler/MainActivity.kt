@@ -176,7 +176,6 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                     if (newNodes.size > 0) {
                         updateCounts()
                         addNodes(newNodes)
-                        updateCounts()
                         updateShareIntent()
                         showMessage("${newNodes.size} new nodes added")
                     } else {
