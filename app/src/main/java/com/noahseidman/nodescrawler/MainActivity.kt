@@ -220,7 +220,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
             }
 
             override fun timeoutOccured() {
-                showMessage("timeout connecting")
+
             }
         })
         peerGroup!!.addPeerDiscovery(DnsDiscovery(SelectedNetParams.instance))
