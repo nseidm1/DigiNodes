@@ -4,6 +4,8 @@
     <string name="messages_default">Messages (0)</string>
     <string name="nodes">Nodes (%s) Open (%s) Recent (%s)</string>
     <string name="nodes_default">Nodes (0) Open (0) Recent (0)</string>
+    <string name="crawling">Crawling Index (%s)</string>
+    <string name="crawling_default">Crawling (0)</string>
     <string name="digibyte">DigiByte</string>
     <string name="bitcoin">Bitcoin</string>
     <string name="vertcoin">Vertcoin</string>
@@ -25,6 +27,7 @@
     <string name="pivx">Pivx</string>
     <string name="mue">MUE</string>
     <string name="phore">Phore</string>
-    <string name="open_checker">Open Checkers\n%s - %s - %s\n%s - %s - %s</string>
-    <string name="open_checker_default">Open Checkers\n0 - 0 - 0\n0 - 0 - 0</string>
+    <string name="open_checker">%s - %s - %s - %s - %s - %s</string>
+    <string name="open_checker_default">0 - 0 - 0 - 0 - 0 - 0</string>
+    <string name="open_checkers">Open Checkers</string>
 </resources>

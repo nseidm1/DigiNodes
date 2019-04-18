@@ -153,6 +153,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                         getAddresses?.cancel()
                         getAddresses = GetAddressesRunnable(this@MainActivity, peer, peerGroup!!)
                         generalExecutor.schedule(getAddresses, 0, TimeUnit.MILLISECONDS)
+                        updateCounts()
                     }, it)
                 }
             }
@@ -335,6 +336,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     private fun updateCounts() {
         handler.post {
             count.text = String.format(getString(R.string.nodes), nodes.size, openCount, recentsCount)
+            crawling.text = String.format(getString(R.string.crawling), nodeIndex)
         }
     }
 

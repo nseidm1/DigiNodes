@@ -9,7 +9,8 @@
                                        android:background="@color/colorPrimary">
 
         <androidx.appcompat.widget.AppCompatSpinner android:layout_width="wrap_content" android:id="@+id/spinner"
-                                                    android:layout_height="wrap_content" android:layout_gravity="start"/>
+                                                    android:layout_height="wrap_content"
+                                                    android:layout_gravity="start"/>
         <ProgressBar android:id="@+id/progress" android:layout_width="wrap_content" android:layout_height="wrap_content"
                      android:layout_gravity="end"/>
     </androidx.appcompat.widget.Toolbar>
@@ -26,21 +27,41 @@
 
     <TextView android:id="@+id/messages" android:padding="16dp" android:layout_width="match_parent"
               android:layout_height="wrap_content"
-              android:text="@string/messages_default" android:gravity="center" android:textSize="18sp" android:textStyle="bold"
+              android:text="@string/messages_default" android:gravity="center" android:textSize="18sp"
+              android:textStyle="bold"
               android:background="#cccccc"/>
 
     <androidx.recyclerview.widget.RecyclerView android:layout_width="match_parent" android:id="@+id/recycler_info"
                                                android:layout_height="0dp" android:layout_weight="1"/>
 
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
-        <TextView android:id="@+id/count" android:padding="16dp" android:layout_width="match_parent"
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                  android:orientation="vertical">
+        <TextView android:id="@+id/count" android:paddingStart="16dp" android:paddingTop="16dp"
+                  android:paddingEnd="16dp" android:paddingBottom="8dp" android:layout_width="match_parent"
                   android:layout_height="wrap_content"
-                  android:text="@string/nodes_default" android:gravity="center" android:textSize="18sp" android:textStyle="bold"
+                  android:text="@string/nodes_default" android:gravity="center" android:textSize="18sp"
+                  android:textStyle="bold"
                   android:background="#cccccc"/>
 
-        <TextView android:id="@+id/open_checker" android:padding="16dp" android:layout_width="match_parent"
+        <TextView android:id="@+id/crawling" android:paddingStart="16dp" android:paddingTop="8dp"
+                  android:paddingEnd="16dp" android:paddingBottom="8dp" android:layout_width="match_parent"
                   android:layout_height="wrap_content"
-                  android:text="@string/open_checker_default" android:gravity="center" android:textSize="18sp" android:textStyle="bold"
+                  android:text="@string/crawling_default" android:gravity="center" android:textSize="18sp"
+                  android:textStyle="bold"
+                  android:background="#cccccc"/>
+
+        <TextView android:paddingStart="16dp" android:paddingTop="8dp"
+                  android:paddingEnd="16dp" android:layout_width="match_parent"
+                  android:layout_height="wrap_content"
+                  android:text="@string/open_checkers" android:gravity="center" android:textSize="18sp"
+                  android:textStyle="bold"
+                  android:background="#cccccc"/>
+
+        <TextView android:id="@+id/open_checker" android:paddingStart="16dp"
+                  android:paddingEnd="16dp" android:paddingBottom="16dp" android:layout_width="match_parent"
+                  android:layout_height="wrap_content"
+                  android:text="@string/open_checker_default" android:gravity="center" android:textSize="14sp"
+                  android:textStyle="bold"
                   android:background="#cccccc"/>
     </LinearLayout>
 
