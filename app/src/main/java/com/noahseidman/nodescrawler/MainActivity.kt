@@ -40,7 +40,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     private val handler = Handler(Looper.getMainLooper())
     private lateinit var adapter_nodes: MultiTypeDataBoundAdapter
     private lateinit var adapter_info: MultiTypeDataBoundAdapter
-    private var generalExecutor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
+    private var generalExecutor: ScheduledExecutorService = Executors.newScheduledThreadPool(2)
     private var exportAggregatorExecutor: Executor = Executors.newSingleThreadExecutor()
     private var openCheckerExecutor: Executor = Executors.newCachedThreadPool()
     private var peerGroup: PeerGroup? = null
@@ -462,7 +462,15 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                 activity.updateOpenCheckerCount()
             }
             if (!canceled) {
-                Thread.sleep(350)
+                if (activity.nodes.size < 100) {
+                    Thread.sleep(2000)
+                } else if (activity.nodes.size < 500) {
+                    Thread.sleep(750)
+                } else if (activity.nodes.size < 5000) {
+                    Thread.sleep(500)
+                } else if (activity.nodes.size < 10000) {
+                    Thread.sleep(350)
+                }
                 activity.openCheckerExecutor.execute(this)
             }
         }
