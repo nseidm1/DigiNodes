@@ -335,6 +335,11 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
     private fun updateCounts() {
         handler.post {
             count.text = String.format(getString(R.string.nodes), nodes.size, openCount, recentsCount)
+        }
+    }
+
+    private fun updateCrawlIndex() {
+        handler.post {
             crawling.text = String.format(getString(R.string.crawling), nodeIndex)
         }
     }
@@ -466,7 +471,9 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                 activity.updateOpenCheckerCount()
             }
             if (!canceled) {
-                if (activity.nodes.size < 100) {
+                if (activity.nodes.size < 25) {
+                    Thread.sleep(5000)
+                } else if (activity.nodes.size < 100) {
                     Thread.sleep(2000)
                 } else if (activity.nodes.size < 500) {
                     Thread.sleep(750)
@@ -525,6 +532,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
         override fun run() {
             if (activity.getNewPeerFlag) {
                 val openNode = activity.getNewOpenPeer()
+                activity.updateCrawlIndex()
                 openNode?.let {
                     activity.showMessage("requesting new node")
                     activity.generalExecutor.schedule( { activity.peerGroup?.connectTo(it) }, 1000, TimeUnit.MILLISECONDS)
