@@ -410,7 +410,11 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
             return null
         } else {
             try{
-                return filteredList.elementAt(nodeIndex)
+                if (nodeIndex < filteredList.size - 1) {
+                    return filteredList.elementAt(nodeIndex)
+                } else {
+                    return null;
+                }
             } finally {
                 if (nodeIndex < filteredList.size - 1) {
                     nodeIndex++
