@@ -1549,11 +1549,11 @@ public class Peer extends PeerSocketHandler {
      */
     public boolean setMinProtocolVersion(int minProtocolVersion) {
         this.vMinProtocolVersion = minProtocolVersion;
-        if (getVersionMessage().clientVersion < minProtocolVersion) {
-            log.warn("{}: Disconnecting due to new min protocol version {}", this, minProtocolVersion);
-            close();
-            return true;
-        }
+//        if (getVersionMessage().clientVersion < minProtocolVersion) {
+//            log.warn("{}: Disconnecting due to new min protocol version {}", this, minProtocolVersion);
+//            close();
+//            return true;
+//        }
         return false;
     }
 

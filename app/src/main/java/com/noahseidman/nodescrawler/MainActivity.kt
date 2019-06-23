@@ -99,7 +99,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
             getString(R.string.bitcoingold), getString(R.string.bitcoincash), getString(R.string.bitcoindiamond),
             getString(R.string.bitcoinsv), getString(R.string.litecoin), getString(R.string.block),
             getString(R.string.zcoin), getString(R.string.komodo), getString(R.string.stratis),
-            getString(R.string.pivx), getString(R.string.mue), getString(R.string.phore), getString(R.string.syscoin))
+            getString(R.string.pivx), getString(R.string.mue), getString(R.string.phore))
         val adapter = ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, coins)
         spinner.adapter = adapter
         spinner.onItemSelectedListener = this
@@ -305,7 +305,6 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, AdapterView.OnIt
                 16 -> init(PivxCoinDefinition.get())
                 17 -> init(MueCoinDefinition.get())
                 18 -> init(PhoreCoinDefinition.get())
-                19 -> init(SyscoinDefinition.get())
             }
         })
     }
